@@ -28,8 +28,9 @@ class RabbitMQListenCommand extends Command
 		);
 		$channel = $connection->channel();
 
+		$exchange = config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.exchange');
 		$channel->exchange_declare(
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.exchange'),
+			$exchange,
 			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.type'),
 			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.passive', false),
 			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.durable', false),
@@ -44,15 +45,15 @@ class RabbitMQListenCommand extends Command
 
 		$binding_keys = config('laravel-rabbitmq.' . $queueIdentifier . '.bindings', []);
 		foreach ($binding_keys as $binding_key => $event) {
-			$channel->queue_bind($queue_name, config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.exchange'),
+			$channel->queue_bind($queue_name, $exchange,
 				$binding_key);
 		}
 
-		$callback = function ($msg) {
+		$callback = function ($msg) use ($queueIdentifier) {
 			$event = config('laravel-rabbitmq.' . $queueIdentifier . '.bindings.' . $msg->delivery_info['routing_key']);
 
 			if ($event !== null) {
-				event(new $event($msg->body));
+				event(new $event( json_decode($msg->body, true) ));
 			}
 		};
 
