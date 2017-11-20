@@ -65,5 +65,7 @@ class RabbitMQ
 
 		$channel->close();
 		$connection->close();
+
+		return $this;
 	}
 }
