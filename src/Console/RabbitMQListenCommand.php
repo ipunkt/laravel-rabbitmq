@@ -9,6 +9,7 @@ class RabbitMQListenCommand extends Command
 {
 	protected $signature = 'rabbitmq:listen
 							{ queue : Queue name to listen on }
+							{ --declare-exchange : Declare exchange when missing }
 							';
 	protected $description = 'Listens on RabbitMQ queues and maps to laravel events';
 
@@ -29,17 +30,19 @@ class RabbitMQListenCommand extends Command
 		$channel = $connection->channel();
 
 		$exchange = config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.exchange');
-		$channel->exchange_declare(
-			$exchange,
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.type'),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.passive', false),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.durable', false),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.auto_delete', true),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.internal', false),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.nowait', false),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.arguments'),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.ticket')
-		);
+		if ($this->option('declare-exchange')) {
+			$channel->exchange_declare(
+				$exchange,
+				config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.type'),
+				config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.passive', false),
+				config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.durable', false),
+				config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.auto_delete', true),
+				config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.internal', false),
+				config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.nowait', false),
+				config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.arguments'),
+				config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.ticket')
+			);
+		}
 
 		list($queue_name, ,) = $channel->queue_declare('', false, false, true, false);
 
@@ -53,7 +56,7 @@ class RabbitMQListenCommand extends Command
 			$event = config('laravel-rabbitmq.' . $queueIdentifier . '.bindings.' . $msg->delivery_info['routing_key']);
 
 			if ($event !== null) {
-				event(new $event( json_decode($msg->body, true) ));
+				event(new $event(json_decode($msg->body, true)));
 			}
 		};
 
