@@ -55,7 +55,7 @@ class RabbitMQ
 			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.ticket')
 		);
 
-		$msg = new AMQPMessage($this->data);
+		$msg = new AMQPMessage(json_encode($this->data));
 
 		$channel->basic_publish(
 			$msg,
