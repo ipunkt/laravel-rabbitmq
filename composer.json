@@ -1,0 +1,41 @@
+{
+	"name": "ipunkt/laravel-rabbitmq",
+	"description": "This is a starter package for laravel",
+	"type": "library",
+	"require": {
+		"php": ">=7.0.0",
+		"illuminate/console": "^5.5",
+		"illuminate/support": "^5.5",
+		"php-amqplib/php-amqplib": "^2.7"
+	},
+	"autoload": {
+		"psr-4": {
+			"Ipunkt\\LaravelRabbitMQ\\": "src/"
+		}
+	},
+	"license": "MIT",
+	"authors": [
+		{
+			"name": "Robert Kummer",
+			"email": "rok@ipunkt.biz"
+		}
+	],
+	"minimum-stability": "stable",
+	"config": {
+		"preferred-install": "dist",
+		"sort-packages": true,
+		"optimize-autoloader": true
+	},
+	"extra": {
+		"laravel": {
+			"dont-discover": [
+			],
+			"providers": [
+				"Ipunkt\\LaravelRabbitMQ\\Providers\\LaravelRabbitMQServiceProvider"
+			],
+			"aliases": {
+			}
+		}
+	}
+
+}
