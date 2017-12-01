@@ -3,6 +3,7 @@
 namespace Ipunkt\LaravelRabbitMQ\Console;
 
 use Illuminate\Console\Command;
+use Ipunkt\LaravelRabbitMQ\EventMapper\EventMapper;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 
 class RabbitMQListenCommand extends Command
@@ -12,6 +13,19 @@ class RabbitMQListenCommand extends Command
 							{ --declare-exchange : Declare exchange when missing }
 							';
 	protected $description = 'Listens on RabbitMQ queues and maps to laravel events';
+	/**
+	 * @var EventMapper
+	 */
+	private $eventMapper;
+
+	/**
+	 * RabbitMQListenCommand constructor.
+	 * @param EventMapper $eventMapper
+	 */
+	public function __construct( EventMapper $eventMapper) {
+		parent::__construct();
+		$this->eventMapper = $eventMapper;
+	}
 
 	public function handle()
 	{
@@ -53,7 +67,7 @@ class RabbitMQListenCommand extends Command
 		}
 
 		$callback = function ($msg) use ($queueIdentifier) {
-			$event = config('laravel-rabbitmq.' . $queueIdentifier . '.bindings.' . $msg->delivery_info['routing_key']);
+			$event = $this->eventMapper->map( $queueIdentifier, $msg->delivery_info['routing_key'] );
 
 			if ($event !== null) {
 				event(new $event(json_decode($msg->body, true)));

@@ -4,6 +4,7 @@ namespace Ipunkt\LaravelRabbitMQ\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Ipunkt\LaravelRabbitMQ\Console\RabbitMQListenCommand;
+use Ipunkt\LaravelRabbitMQ\EventMapper\EventMapper;
 
 class LaravelRabbitMQServiceProvider extends ServiceProvider
 {
@@ -26,8 +27,17 @@ class LaravelRabbitMQServiceProvider extends ServiceProvider
 				$this->packagePath('config/config.php') => config_path('laravel-rabbitmq.php'),
 			], 'laravel-rabbitmq-config');
 
-			$this->app->singleton(RabbitMQListenCommand::class, function () {
-				return new RabbitMQListenCommand();
+
+			$this->app->bind( EventMapper::class, function() {
+
+				$config = config('laravel-rabbitmq');
+
+				return new EventMapper($config);
+
+			});
+
+			$this->app->singleton(RabbitMQListenCommand::class, function ($app) {
+				return new RabbitMQListenCommand( $app->make(EventMapper::class) );
 			});
 
 			$this->commands(RabbitMQListenCommand::class);
