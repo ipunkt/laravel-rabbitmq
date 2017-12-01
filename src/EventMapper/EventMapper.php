@@ -3,6 +3,9 @@ namespace Ipunkt\LaravelRabbitMQ\EventMapper;
 
 /**
  * Class EventMapper
+ *
+ * Map RabbitMQ events to Laravel events.
+ * Reads from the bindings in the configuration file
  */
 class EventMapper {
 	/**
@@ -19,6 +22,7 @@ class EventMapper {
 	}
 
 	/**
+	 * @param string $queueIdentifier
 	 * @param string $rabbitMQEvent
 	 * @return string
 	 */
