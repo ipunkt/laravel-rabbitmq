@@ -44,19 +44,22 @@ class RabbitMQListenCommand extends Command
 		$channel = $connection->channel();
 
 		$exchange = config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.exchange');
-		if ($this->option('declare-exchange')) {
-			$channel->exchange_declare(
-				$exchange,
-				config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.type'),
-				config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.passive', false),
-				config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.durable', false),
-				config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.auto_delete', true),
-				config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.internal', false),
-				config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.nowait', false),
-				config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.arguments'),
-				config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.ticket')
-			);
-		}
+
+		$passive = config( 'laravel-rabbitmq.' . $queueIdentifier . '.exchange.passive', false );
+		if ($this->option('declare-exchange'))
+			$passive = false;
+
+		$channel->exchange_declare(
+			$exchange,
+			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.type'),
+			$passive,
+			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.durable', false),
+			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.auto_delete', true),
+			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.internal', false),
+			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.nowait', false),
+			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.arguments'),
+			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.ticket')
+		);
 
 		list($queue_name, ,) = $channel->queue_declare('', false, false, true, false);
 
