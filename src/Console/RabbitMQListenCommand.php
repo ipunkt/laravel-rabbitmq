@@ -4,6 +4,7 @@ namespace Ipunkt\LaravelRabbitMQ\Console;
 
 use Illuminate\Console\Command;
 use Ipunkt\LaravelRabbitMQ\EventMapper\EventMapper;
+use Ipunkt\LaravelRabbitMQ\Events\ExceptionInRabbitMQEvent;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 
 class RabbitMQListenCommand extends Command
@@ -70,7 +71,13 @@ class RabbitMQListenCommand extends Command
 			$event = $this->eventMapper->map( $queueIdentifier, $msg->delivery_info['routing_key'] );
 
 			if ($event !== null) {
-				event(new $event(json_decode($msg->body, true)));
+				try {
+					event(new $event(json_decode($msg->body, true)));
+				} catch(\Exception $e) {
+					$this->error( $e->getFile().":".$e->getLine().' '. $e->getMessage() );
+					$this->error( $e->getCode() );
+					event( new ExceptionInRabbitMQEvent($e) );
+				}
 			}
 		};
 
