@@ -76,6 +76,10 @@ class RabbitMQListenCommand extends Command
 			if ($event !== null) {
 				try {
 					event(new $event(json_decode($msg->body, true)));
+				} catch(\Throwable $e) {
+					$this->error( $e->getFile().":".$e->getLine().' '. $e->getMessage() );
+					$this->error( $e->getCode() );
+					event( new ExceptionInRabbitMQEvent($e) );
 				} catch(\Exception $e) {
 					$this->error( $e->getFile().":".$e->getLine().' '. $e->getMessage() );
 					$this->error( $e->getCode() );
