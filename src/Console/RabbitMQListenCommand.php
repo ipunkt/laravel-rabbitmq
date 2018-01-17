@@ -62,7 +62,7 @@ class RabbitMQListenCommand extends Command
 			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.ticket')
 		);
 
-		list($queue_name, ,) = $channel->queue_declare('', false, false, true, false);
+		list($queue_name, ,) = $channel->queue_declare(config('laravel-rabbitmq.' . $queueIdentifier . '.name', ''), false, config('laravel-rabbitmq.' . $queueIdentifier . '.durable', false), true, false);
 
 		$binding_keys = config('laravel-rabbitmq.' . $queueIdentifier . '.bindings', []);
 		foreach ($binding_keys as $binding_key => $event) {
@@ -88,7 +88,7 @@ class RabbitMQListenCommand extends Command
 			}
 		};
 
-		$channel->basic_consume($queue_name, '', false, true, false, false, $callback);
+		$channel->basic_consume($queue_name, '', false, config('laravel-rabbitmq.' . $queueIdentifier . '.durable', false), false, false, $callback);
 
 		while (count($channel->callbacks)) {
 			$channel->wait();
