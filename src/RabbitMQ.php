@@ -55,7 +55,11 @@ class RabbitMQ
 			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.ticket')
 		);
 
-		$msg = new AMQPMessage(json_encode($this->data));
+		$properties = [];
+		if( config('laravel-rabbitmq.' . $queueIdentifier . '.durable') )
+			$properties['delivery_mode'] = AMQPMessage::DELIVERY_MODE_PERSISTENT;
+
+		$msg = new AMQPMessage(json_encode($this->data), $properties);
 
 		$channel->basic_publish(
 			$msg,
