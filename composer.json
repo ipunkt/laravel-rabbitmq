@@ -36,6 +36,8 @@
 			"aliases": {
 			}
 		}
+	},
+	"require-dev": {
+		"monolog/monolog": "^1.23"
 	}
-
 }

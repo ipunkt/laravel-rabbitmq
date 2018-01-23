@@ -5,7 +5,7 @@ namespace Ipunkt\LaravelRabbitMQ\Console;
 use Illuminate\Console\Command;
 use Ipunkt\LaravelRabbitMQ\EventMapper\EventMapper;
 use Ipunkt\LaravelRabbitMQ\Events\ExceptionInRabbitMQEvent;
-use PhpAmqpLib\Connection\AMQPStreamConnection;
+use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\RabbitMQExchangeBuilder;
 
 class RabbitMQListenCommand extends Command
 {
@@ -17,14 +17,20 @@ class RabbitMQListenCommand extends Command
 	 * @var EventMapper
 	 */
 	private $eventMapper;
+	/**
+	 * @var RabbitMQExchangeBuilder
+	 */
+	private $exchangeBuilder;
 
 	/**
 	 * RabbitMQListenCommand constructor.
 	 * @param EventMapper $eventMapper
+	 * @param RabbitMQExchangeBuilder $exchangeBuilder
 	 */
-	public function __construct( EventMapper $eventMapper) {
+	public function __construct( EventMapper $eventMapper, RabbitMQExchangeBuilder $exchangeBuilder) {
 		parent::__construct();
 		$this->eventMapper = $eventMapper;
+		$this->exchangeBuilder = $exchangeBuilder;
 	}
 
 	public function handle()
@@ -35,31 +41,8 @@ class RabbitMQListenCommand extends Command
 			throw new \InvalidArgumentException('No queue ' . $queueIdentifier . ' configured');
 		}
 
-		$connection = new AMQPStreamConnection(
-			config('laravel-rabbitmq.' . $queueIdentifier . '.host'),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.port', 5672),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.user'),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.password')
-		);
-		$channel = $connection->channel();
-
-		$exchange = config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.exchange');
-
-		$passive = config( 'laravel-rabbitmq.' . $queueIdentifier . '.exchange.passive', false );
-		if ($this->option('declare-exchange'))
-			$passive = false;
-
-		$channel->exchange_declare(
-			$exchange,
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.type'),
-			$passive,
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.durable', false),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.auto_delete', true),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.internal', false),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.nowait', false),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.arguments'),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.ticket')
-		);
+		$channel = $this->exchangeBuilder->buildChannel($queueIdentifier);
+		$exchange = $this->exchangeBuilder->build($queueIdentifier, $this->option('declare-exchange'));
 
 		list($queue_name, ,) = $channel->queue_declare(config('laravel-rabbitmq.' . $queueIdentifier . '.name', ''), false, config('laravel-rabbitmq.' . $queueIdentifier . '.durable', false), true, false);
 
@@ -113,6 +96,6 @@ class RabbitMQListenCommand extends Command
 		}
 
 		$channel->close();
-		$connection->close();
+		$this->exchangeBuilder->closeConnection($queueIdentifier);
 	}
 }

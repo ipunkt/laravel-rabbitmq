@@ -35,4 +35,8 @@ return [
 			//  key => event name
 		],
 	],
+	'logging' => [
+		'enable' => false,
+		'queue-identifier' => 'default',
+	],
 ];

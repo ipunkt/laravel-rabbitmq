@@ -2,9 +2,13 @@
 
 namespace Ipunkt\LaravelRabbitMQ\Providers;
 
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
 use Ipunkt\LaravelRabbitMQ\Console\RabbitMQListenCommand;
 use Ipunkt\LaravelRabbitMQ\EventMapper\EventMapper;
+use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\RabbitMQExchangeBuilder;
+use Ipunkt\LaravelRabbitMQ\RabbitMQ\Monolog\HandlerBuilder;
+use Monolog\Handler\AmqpHandler;
 
 class LaravelRabbitMQServiceProvider extends ServiceProvider
 {
@@ -36,12 +40,37 @@ class LaravelRabbitMQServiceProvider extends ServiceProvider
 
 			});
 
-			$this->app->singleton(RabbitMQListenCommand::class, function ($app) {
-				return new RabbitMQListenCommand( $app->make(EventMapper::class) );
+			$this->app->singleton(RabbitMQExchangeBuilder::class, function() {
+				return new RabbitMQExchangeBuilder( config('laravel-rabbitmq') );
 			});
+
+			$this->app->singleton(RabbitMQListenCommand::class, function (Application $app) {
+				return new RabbitMQListenCommand( $app->make(EventMapper::class), $app->make(RabbitMQExchangeBuilder::class) );
+			});
+
 
 			$this->commands(RabbitMQListenCommand::class);
 		}
+	}
+
+	/**
+	 *
+	 */
+	public function boot() {
+		$loggingEnabled = config('laralvel-rabbittmq.logging.enable', false);
+
+		if(!$loggingEnabled)
+			return;
+
+		$queueIdentifier = config('laralvel-rabbittmq.logging.queue-identifier');
+
+		$exchangeName = config('laralvel-rabbittmq.'.$queueIdentifier.'.exchange.exchange');
+		/**
+		 * @var HandlerBuilder $handlerBuilder
+		 */
+		$handlerBuilder = $this->app->make(HandlerBuilder::class);
+		$handler = $handlerBuilder->buildHandler($queueIdentifier);
+
 	}
 
 	/**
