@@ -10,6 +10,16 @@ return [
 		'port' => 5672,
 		'user' => 'guest',
 		'password' => 'guest',
+		/**
+		 * Queue name in rabbitmq
+		 * Leaving this empty will create an anonymous queue.
+		 * Generally it is only necessary to set this if durable is set to true
+		 */
+		'name' => '',
+		/**
+		 *
+		 */
+		'durable' => false,
 		'exchange' => [
 			'exchange' => '',
 			'type' => '',

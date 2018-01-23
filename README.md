@@ -35,6 +35,8 @@ In `config/laravel-rabbitmq.php` is the configuration for the usable queues on R
 	'port' => 5672,
 	'user' => 'guest',
 	'password' => 'guest',
+	'name' => '',
+	'durable' => false,
 	'exchange' => [
 		'exchange' => 'YOUR-EXCHANGE-NAME',
 		'type' => 'YOUR-EXCHANGE-TYPE',
@@ -78,6 +80,31 @@ We suggest the message sender creates the exchange. If you do it the other way a
 
 Within the configuration `bindings` has routing keys configured with a 1:1 mapping to a laravel event (`php artisan make:event ...`). This event gets the message data as constructor parameter.
 
-Then you can have one or more listener (`php artisan make:listener ...`) - defined in your EventListener. And voila everything works fine.
+Then you can have one or more listener (`php artisan make:listen ...`) - defined in your EventListener. And voila everything works fine.
 
 We suggest running the `rabbitmq:listen` command with a [supervisor](https://laravel.com/docs/5.5/queues#supervisor-configuration) backed container like the [queue:work](https://laravel.com/docs/5.5/queues#running-the-queue-worker) command shipped with laravel.
+
+#### Persistent messages
+Setting the `durable` for a queue will cause the queue to be created durable. This means it will continue to exist - and
+ receive messages - when `rabbitmq:listen` is not running.
+To take advantage of this fact `name` should also be set to a string identifying the microservice. This will cause the
+queue to be named instead of anonymous so running `rabbitmq:listen` will actually reconnect to the queue and process all
+messages received by it.
+
+Setting `durable` also enables consumer confirmation for messages.
+This means a message is only deleted from the queue after it is confirmed. This is currently done by returning `true` or
+`false` from the EventHandler.
+Returning `true` acknowledges the message as done  
+Returning `false` acknowledges the message as not processed but does not concern this service so delete anyway
+Returning anything else including the default `null` or having an exception escalate outside the handler will not acknowledge
+the message and have it return to the queue.
+
+Note the rabbitmq note on this mode of durability:
+
+---
+
+##### Note on message persistence
+
+Marking messages as persistent doesn't fully guarantee that a message won't be lost. Although it tells RabbitMQ to save the message to disk, there is still a short time window when RabbitMQ has accepted a message and hasn't saved it yet. Also, RabbitMQ doesn't do fsync(2) for every message -- it may be just saved to cache and not really written to the disk. The persistence guarantees aren't strong, but it's more than enough for our simple task queue. If you need a stronger guarantee then you can use publisher confirms.
+
+---
