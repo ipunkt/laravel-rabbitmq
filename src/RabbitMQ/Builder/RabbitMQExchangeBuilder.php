@@ -34,7 +34,7 @@ class RabbitMQExchangeBuilder {
 	 */
 	public function buildChannel($configurationName) {
 
-		if( array_key_exists($configurationName, $this->configuration) || !is_array($this->configuration[$configurationName]) )
+		if( !array_key_exists($configurationName, $this->configuration) || !is_array($this->configuration[$configurationName]) )
 			throw new ExchangeNotDefinedException("$configurationName not defined in the configuration.");
 
 		$connection = $this->getConnection( $configurationName );
