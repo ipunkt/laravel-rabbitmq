@@ -10,6 +10,7 @@ use Ipunkt\LaravelRabbitMQ\EventMapper\EventMapper;
 use Ipunkt\LaravelRabbitMQ\Logging\CreateRabbitmqLogger;
 use Ipunkt\LaravelRabbitMQ\Logging\Monolog\HandlerBuilder;
 use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\RabbitMQExchangeBuilder;
+use PhpAmqpLib\Exception\AMQPRuntimeException;
 
 class LaravelRabbitMQServiceProvider extends ServiceProvider
 {
@@ -77,12 +78,16 @@ class LaravelRabbitMQServiceProvider extends ServiceProvider
 		 */
 		$createRabbitmqLogger = $this->app->make(CreateRabbitmqLogger::class);
 
-		$handler = $createRabbitmqLogger();
-
 		/**
 		 * @var Log $log
 		 */
 		$log = $this->app->make('log');
+
+		try {
+			$handler = $createRabbitmqLogger();
+		} catch(AMQPRuntimeException $e) {
+			$log->warning('Failed to rabbitmq for logging');
+		}
 
 		/**
 		 * @var Monolog $monolog
