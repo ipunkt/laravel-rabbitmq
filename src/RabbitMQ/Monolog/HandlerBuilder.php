@@ -38,12 +38,8 @@ class HandlerBuilder {
 		$this->exchangeBuilder->build($configurationName, true);
 
 		$handler = new AmqpHandler($channel, $exchangeName);
-		/**
-		 * @var Logger $monolog
-		 *
-		 */
-		$monolog = $this->log->getMonolog();
-		$monolog->pushHandler($handler);
+
+		return $handler;
 	}
 
 }

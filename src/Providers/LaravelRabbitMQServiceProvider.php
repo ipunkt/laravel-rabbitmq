@@ -3,9 +3,11 @@
 namespace Ipunkt\LaravelRabbitMQ\Providers;
 
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Contracts\Logging\Log;
 use Illuminate\Support\ServiceProvider;
 use Ipunkt\LaravelRabbitMQ\Console\RabbitMQListenCommand;
 use Ipunkt\LaravelRabbitMQ\EventMapper\EventMapper;
+use Ipunkt\LaravelRabbitMQ\Logging\CreateRabbitmqLogger;
 use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\RabbitMQExchangeBuilder;
 use Ipunkt\LaravelRabbitMQ\RabbitMQ\Monolog\HandlerBuilder;
 use Monolog\Handler\AmqpHandler;
@@ -48,29 +50,46 @@ class LaravelRabbitMQServiceProvider extends ServiceProvider
 				return new RabbitMQListenCommand( $app->make(EventMapper::class), $app->make(RabbitMQExchangeBuilder::class) );
 			});
 
+			$this->app->bind(CreateRabbitmqLogger::class, function() {
+				$builder = $this->app->make(HandlerBuilder::class);
+
+				$queueIdentifier = config('laravel-rabbitmq.logging.queue-identifier');
+
+				$exchangeName = config('laravel-rabbitmq.'.$queueIdentifier.'.exchange.exchange');
+
+				return new CreateRabbitmqLogger($builder, $queueIdentifier, $exchangeName);
+			});
+
+
 
 			$this->commands(RabbitMQListenCommand::class);
 		}
 	}
 
-	/**
-	 *
-	 */
-	public function boot() {
-		$loggingEnabled = config('laralvel-rabbittmq.logging.enable', false);
-
+	public function boot(  ) {
+		$loggingEnabled = config('laravel-rabbitmq.logging.enable', false);
 		if(!$loggingEnabled)
 			return;
 
-		$queueIdentifier = config('laralvel-rabbittmq.logging.queue-identifier');
-
-		$exchangeName = config('laralvel-rabbittmq.'.$queueIdentifier.'.exchange.exchange');
 		/**
-		 * @var HandlerBuilder $handlerBuilder
+		 * @var CreateRabbitmqLogger $createRabbitmqLogger
 		 */
-		$handlerBuilder = $this->app->make(HandlerBuilder::class);
-		$handler = $handlerBuilder->buildHandler($queueIdentifier);
+		$createRabbitmqLogger = $this->app->make(CreateRabbitmqLogger::class);
 
+		$handler = $createRabbitmqLogger();
+
+		/**
+		 * @var Log $log
+		 */
+		$log = $this->app->make('log');
+
+		/**
+		 * @var Monolog $monolog
+		 */
+		$monolog = $log->getMonolog();
+
+		$monolog->pushHandler($handler);
+		$log->info('Test!');
 	}
 
 	/**

@@ -60,6 +60,9 @@ class RabbitMQListenCommand extends Command
 
 			if ($event !== null) {
 				try {
+					if($event[0] !== '\\')
+						$event = '\\'.$event;
+
 					$success = event(new $event(json_decode($msg->body, true)));
 
 					if( config('laravel-rabbitmq.' . $queueIdentifier . '.durable', false) ) {
