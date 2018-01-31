@@ -87,6 +87,7 @@ class LaravelRabbitMQServiceProvider extends ServiceProvider
 			$handler = $createRabbitmqLogger();
 		} catch(AMQPRuntimeException $e) {
 			$log->warning('Failed to rabbitmq for logging');
+			return;
 		}
 
 		/**
