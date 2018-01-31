@@ -89,7 +89,6 @@ class LaravelRabbitMQServiceProvider extends ServiceProvider
 		$monolog = $log->getMonolog();
 
 		$monolog->pushHandler($handler);
-		$log->info('Test!');
 	}
 
 	/**
