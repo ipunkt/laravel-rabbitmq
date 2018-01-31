@@ -53,6 +53,15 @@ In `config/laravel-rabbitmq.php` is the configuration for the usable queues on R
 		// ROUTING-KEY maps to an LARAVEL-EVENT-CLASS-NAME
 	],
 ],
+'logging' => [
+	'enable' => false,
+	/**
+	 * Set this to false if you do not wish to log Exceptions or Throwables from `rabbitmq:listen`
+	 */
+	'event-errors' => true,
+	'queue-identifier' => 'default',
+	'extra-context' => [],
+],
 ```
 
 ## Usage
@@ -108,3 +117,12 @@ Note the rabbitmq note on this mode of durability:
 Marking messages as persistent doesn't fully guarantee that a message won't be lost. Although it tells RabbitMQ to save the message to disk, there is still a short time window when RabbitMQ has accepted a message and hasn't saved it yet. Also, RabbitMQ doesn't do fsync(2) for every message -- it may be just saved to cache and not really written to the disk. The persistence guarantees aren't strong, but it's more than enough for our simple task queue. If you need a stronger guarantee then you can use publisher confirms.
 
 ---
+
+### Logging
+If logging is set to true then a MessageHandler is added to the laravel monolog instance which sends messages to the
+given exchange.
+If `extra-context` is set then the content will be added to every messages context. Use case for this is to add
+a `'service' => 'currentmicroservice'` info to all messages to identify which service the message is from.
+Unless `event-errors` is false Exceptions or Throwables caught in `rabbitmq:listen` are forwarded to the laravel logger.
+
+
