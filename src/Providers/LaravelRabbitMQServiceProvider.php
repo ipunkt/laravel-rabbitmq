@@ -10,7 +10,6 @@ use Ipunkt\LaravelRabbitMQ\EventMapper\EventMapper;
 use Ipunkt\LaravelRabbitMQ\Logging\CreateRabbitmqLogger;
 use Ipunkt\LaravelRabbitMQ\Logging\Monolog\HandlerBuilder;
 use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\RabbitMQExchangeBuilder;
-use Monolog\Handler\AmqpHandler;
 
 class LaravelRabbitMQServiceProvider extends ServiceProvider
 {

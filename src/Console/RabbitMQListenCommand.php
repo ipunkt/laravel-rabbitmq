@@ -3,6 +3,7 @@
 namespace Ipunkt\LaravelRabbitMQ\Console;
 
 use Illuminate\Console\Command;
+use Illuminate\Contracts\Logging\Log;
 use Ipunkt\LaravelRabbitMQ\EventMapper\EventMapper;
 use Ipunkt\LaravelRabbitMQ\Events\ExceptionInRabbitMQEvent;
 use Ipunkt\LaravelRabbitMQ\Events\ThrowableInRabbitMQEvent;
@@ -22,16 +23,22 @@ class RabbitMQListenCommand extends Command
 	 * @var RabbitMQExchangeBuilder
 	 */
 	private $exchangeBuilder;
+	/**
+	 * @var Log
+	 */
+	private $logger;
 
 	/**
 	 * RabbitMQListenCommand constructor.
 	 * @param EventMapper $eventMapper
 	 * @param RabbitMQExchangeBuilder $exchangeBuilder
+	 * @param Log $logger
 	 */
-	public function __construct( EventMapper $eventMapper, RabbitMQExchangeBuilder $exchangeBuilder) {
+	public function __construct( EventMapper $eventMapper, RabbitMQExchangeBuilder $exchangeBuilder, Log $logger) {
 		parent::__construct();
 		$this->eventMapper = $eventMapper;
 		$this->exchangeBuilder = $exchangeBuilder;
+		$this->logger = $logger;
 	}
 
 	public function handle()
@@ -89,6 +96,15 @@ class RabbitMQListenCommand extends Command
 					}
 
 				} catch(\Throwable $e) {
+					if( config('laravel-rabbitmq.logging.eventerrors', true) ) {
+
+						$this->logger->alert('Throwable in Rabbitmq eventhandler', [
+							'message' => $e->getMessage(),
+							'throwable' => $e,
+						]);
+
+					}
+
 					$this->error( $e->getFile().":".$e->getLine().' '. $e->getMessage() );
 					$this->error( $e->getCode() );
 					event( new ThrowableInRabbitMQEvent($e) );
@@ -97,6 +113,15 @@ class RabbitMQListenCommand extends Command
 					 * Do not ack or nack the message - message will only be redelivered after a restart(-> version change)
 					 */
 				} catch(\Exception $e) {
+					if( config('laravel-rabbitmq.logging.eventerrors', true) ) {
+
+						$this->logger->alert('Exception in Rabbitmq eventhandler', [
+							'message' => $e->getMessage(),
+							'exception' => $e,
+						]);
+
+					}
+
 					$this->error( $e->getFile().":".$e->getLine().' '. $e->getMessage() );
 					$this->error( $e->getCode() );
 					event( new ExceptionInRabbitMQEvent($e) );
