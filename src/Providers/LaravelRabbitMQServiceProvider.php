@@ -47,7 +47,7 @@ class LaravelRabbitMQServiceProvider extends ServiceProvider
 			});
 
 			$this->app->singleton(RabbitMQListenCommand::class, function (Application $app) {
-				return new RabbitMQListenCommand( $app->make(EventMapper::class), $app->make(RabbitMQExchangeBuilder::class) );
+				return new RabbitMQListenCommand( $app->make(EventMapper::class), $app->make(RabbitMQExchangeBuilder::class), $app->make('log') );
 			});
 
 			$this->app->bind(CreateRabbitmqLogger::class, function() {
