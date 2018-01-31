@@ -1,9 +1,8 @@
-<?php namespace Ipunkt\LaravelRabbitMQ\RabbitMQ\Monolog;
+<?php namespace Ipunkt\LaravelRabbitMQ\Logging\Monolog;
 
 use Illuminate\Contracts\Logging\Log;
 use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\RabbitMQExchangeBuilder;
 use Monolog\Handler\AmqpHandler;
-use Monolog\Logger;
 
 /**
  * Class HandlerBuilder

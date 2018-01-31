@@ -8,8 +8,8 @@ use Illuminate\Support\ServiceProvider;
 use Ipunkt\LaravelRabbitMQ\Console\RabbitMQListenCommand;
 use Ipunkt\LaravelRabbitMQ\EventMapper\EventMapper;
 use Ipunkt\LaravelRabbitMQ\Logging\CreateRabbitmqLogger;
+use Ipunkt\LaravelRabbitMQ\Logging\Monolog\HandlerBuilder;
 use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\RabbitMQExchangeBuilder;
-use Ipunkt\LaravelRabbitMQ\RabbitMQ\Monolog\HandlerBuilder;
 use Monolog\Handler\AmqpHandler;
 
 class LaravelRabbitMQServiceProvider extends ServiceProvider
