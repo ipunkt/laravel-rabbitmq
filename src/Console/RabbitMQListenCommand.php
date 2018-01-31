@@ -66,10 +66,25 @@ class RabbitMQListenCommand extends Command
 					$success = event(new $event(json_decode($msg->body, true)));
 
 					if( config('laravel-rabbitmq.' . $queueIdentifier . '.durable', false) ) {
-						if($success === true)
-							$msg->delivery_info['channel']->basic_ack($msg->delivery_info['delivery_tag']);
-						else if($success === false)
+
+						// No EventHandlers found - message does not concern us
+						if( empty($success) )
 							$msg->delivery_info['channel']->basic_nack($msg->delivery_info['delivery_tag']);
+						// An EventHandler has successfully processed the message - mark done
+						else if(in_array(true, $success))
+							$msg->delivery_info['channel']->basic_ack($msg->delivery_info['delivery_tag']);
+						// An EventHandler has marked the message as does not concern us
+						else if(in_array(false, $success) )
+							$msg->delivery_info['channel']->basic_nack($msg->delivery_info['delivery_tag']);
+
+						/**
+						 * EventHandler returned `null` or an unkown value
+						 *
+						 * Message will not be acknowledged. This will cause the message to return to the queue once
+						 * this process exits.
+						 * This behaviour is choosen here for development purposes - test your code with the same message
+						 * over and over by not returning true at the end of the handler.
+						 */
 					}
 
 				} catch(\Throwable $e) {
@@ -92,7 +107,7 @@ class RabbitMQListenCommand extends Command
 			}
 		};
 
-		$channel->basic_consume($queue_name, '', false, config('laravel-rabbitmq.' . $queueIdentifier . '.durable', false), false, false, $callback);
+		$channel->basic_consume($queue_name, '', false, !config('laravel-rabbitmq.' . $queueIdentifier . '.durable', false), false, false, $callback);
 
 		while (count($channel->callbacks)) {
 			$channel->wait();

@@ -40,6 +40,7 @@ class RabbitMQExchangeBuilder {
 		$connection = $this->getConnection( $configurationName );
 
 		$channel = $connection->channel();
+		$channel->basic_qos(0, 1, false);
 
 		return $channel;
 	}
