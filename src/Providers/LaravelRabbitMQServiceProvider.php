@@ -67,7 +67,7 @@ class LaravelRabbitMQServiceProvider extends ServiceProvider
 	}
 
 	public function boot(  ) {
-		$loggingEnabled = config('laravel-rabbitmq.logging.enable', false);
+		$loggingEnabled = config('laravel-rabbitmq.logging.enable', false) && !$this->app->environment('testing');
 		if(!$loggingEnabled)
 			return;
 
