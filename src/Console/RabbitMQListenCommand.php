@@ -5,6 +5,7 @@ namespace Ipunkt\LaravelRabbitMQ\Console;
 use Illuminate\Console\Command;
 use Ipunkt\LaravelRabbitMQ\EventMapper\EventMapper;
 use Ipunkt\LaravelRabbitMQ\Events\ExceptionInRabbitMQEvent;
+use Ipunkt\LaravelRabbitMQ\Events\ThrowableInRabbitMQEvent;
 use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\RabbitMQExchangeBuilder;
 
 class RabbitMQListenCommand extends Command
@@ -90,7 +91,7 @@ class RabbitMQListenCommand extends Command
 				} catch(\Throwable $e) {
 					$this->error( $e->getFile().":".$e->getLine().' '. $e->getMessage() );
 					$this->error( $e->getCode() );
-					event( new ExceptionInRabbitMQEvent($e) );
+					event( new ThrowableInRabbitMQEvent($e) );
 
 					/**
 					 * Do not ack or nack the message - message will only be redelivered after a restart(-> version change)
