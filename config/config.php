@@ -38,5 +38,6 @@ return [
 	'logging' => [
 		'enable' => false,
 		'queue-identifier' => 'default',
+		'extra-context' => [],
 	],
 ];

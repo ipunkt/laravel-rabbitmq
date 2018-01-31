@@ -57,7 +57,9 @@ class LaravelRabbitMQServiceProvider extends ServiceProvider
 
 				$exchangeName = config('laravel-rabbitmq.'.$queueIdentifier.'.exchange.exchange');
 
-				return new CreateRabbitmqLogger($builder, $queueIdentifier, $exchangeName);
+				$extraContext = config('laravel-rabbitmq.'.$queueIdentifier.'.extra-context', []);
+
+				return new CreateRabbitmqLogger($builder, $queueIdentifier, $exchangeName, $extraContext);
 			});
 
 

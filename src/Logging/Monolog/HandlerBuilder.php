@@ -2,7 +2,6 @@
 
 use Illuminate\Contracts\Logging\Log;
 use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\RabbitMQExchangeBuilder;
-use Monolog\Handler\AmqpHandler;
 
 /**
  * Class HandlerBuilder
@@ -30,13 +29,17 @@ class HandlerBuilder {
 
 	/**
 	 * @param $configurationName
+	 * @param $exchangeName
+	 * @param array $extraContext
+	 * @return AmqpHandlerWithExtraContext
 	 */
-	public function buildHandler($configurationName, $exchangeName) {
+	public function buildHandler($configurationName, $exchangeName, $extraContext = []) {
 		$channel = $this->exchangeBuilder->buildChannel($configurationName);
 
 		$this->exchangeBuilder->build($configurationName, true);
 
-		$handler = new AmqpHandler($channel, $exchangeName);
+		$handler = new AmqpHandlerWithExtraContext($channel, $exchangeName);
+		$handler->setExtraContext($extraContext);
 
 		return $handler;
 	}

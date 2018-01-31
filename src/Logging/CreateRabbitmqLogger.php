@@ -21,15 +21,26 @@ class CreateRabbitmqLogger {
 	 * @var string
 	 */
 	protected $exchangeName = '';
+	/**
+	 * @var null
+	 */
+	private $extraContext;
 
 	/**
 	 * CreateRabbitmqLogger constructor.
 	 * @param HandlerBuilder $handlerBuilder
+	 * @param $queueIdentifier
+	 * @param $exchangeName
+	 * @param null $extraContext
 	 */
-	public function __construct( HandlerBuilder $handlerBuilder, $queueIdentifier, $exchangeName) {
+	public function __construct( HandlerBuilder $handlerBuilder, $queueIdentifier, $exchangeName, $extraContext = null) {
+		if($extraContext === null)
+			$extraContext = [];
+
 		$this->handlerBuilder = $handlerBuilder;
 		$this->queueIdentifier = $queueIdentifier;
 		$this->exchangeName = $exchangeName;
+		$this->extraContext = $extraContext;
 	}
 
 	    /**
@@ -38,7 +49,7 @@ class CreateRabbitmqLogger {
      * @return \Monolog\Logger
      */
     public function __invoke() {
-	    return $this->handlerBuilder->buildHandler($this->queueIdentifier, $this->exchangeName);
+	    return $this->handlerBuilder->buildHandler($this->queueIdentifier, $this->exchangeName, $this->extraContext);
     }
 
 }
