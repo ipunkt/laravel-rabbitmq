@@ -113,7 +113,7 @@ class RabbitMQListenCommand extends Command
 					 * Do not ack or nack the message - message will only be redelivered after a restart(-> version change)
 					 */
 				} catch(\Exception $e) {
-					if( config('laravel-rabbitmq.logging.eventerrors', true) ) {
+					if( config('laravel-rabbitmq.logging.event-errors', true) ) {
 
 						$this->logger->alert('Exception in Rabbitmq eventhandler', [
 							'message' => $e->getMessage(),
@@ -136,7 +136,22 @@ class RabbitMQListenCommand extends Command
 		$channel->basic_consume($queue_name, '', false, !config('laravel-rabbitmq.' . $queueIdentifier . '.durable', false), false, false, $callback);
 
 		while (count($channel->callbacks)) {
-			$channel->wait();
+			try {
+				$channel->wait();
+			} catch(\ErrorException $e) {
+
+				if( config('laravel-rabbitmq.logging.event-errors', true) ) {
+
+					$this->logger->alert('Exception in Rabbitmq wait', [
+						'message' => $e->getMessage(),
+						'exception' => $e,
+					]);
+
+				}
+
+				$this->error( $e->getFile().":".$e->getLine().' '. $e->getMessage() );
+				$this->error( $e->getCode() );
+			}
 		}
 
 		$channel->close();
