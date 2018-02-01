@@ -96,7 +96,7 @@ class RabbitMQExchangeBuilder {
 	 * @param $queueIdentifier
 	 */
 	public function closeConnection( $queueIdentifier ) {
-		if( !array_key_exists($this->connections, $queueIdentifier) )
+		if( !array_key_exists($queueIdentifier, $this->connections) )
 			throw new ClosingUnkownConnectionException("Trying to close connection $queueIdentifier which was not found in the data");
 
 		$this->connections[$queueIdentifier]->close();
