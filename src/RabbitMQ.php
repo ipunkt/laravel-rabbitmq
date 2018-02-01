@@ -63,7 +63,6 @@ class RabbitMQ
 		);
 
 		$channel->close();
-		$this->exchangeBuilder->closeConnection($queueIdentifier);
 
 		return $this;
 	}
