@@ -101,12 +101,15 @@ class RabbitMQListenCommand extends Command
 						$this->logger->alert('Throwable in Rabbitmq eventhandler', [
 							'message' => $e->getMessage(),
 							'throwable' => $e,
+							'trace' => $e->getTrace(),
+							'traceString' => $e->getTraceAsString(),
 						]);
 
 					}
 
 					$this->error( $e->getFile().":".$e->getLine().' '. $e->getMessage() );
 					$this->error( $e->getCode() );
+					$this->error( $e->getTraceAsString() );
 					event( new ThrowableInRabbitMQEvent($e) );
 
 					/**
@@ -118,12 +121,15 @@ class RabbitMQListenCommand extends Command
 						$this->logger->alert('Exception in Rabbitmq eventhandler', [
 							'message' => $e->getMessage(),
 							'exception' => $e,
+							'trace' => $e->getTraceAsString(),
+							'traceString' => $e->getTraceAsString(),
 						]);
 
 					}
 
 					$this->error( $e->getFile().":".$e->getLine().' '. $e->getMessage() );
 					$this->error( $e->getCode() );
+					$this->error( $e->getTraceAsString() );
 					event( new ExceptionInRabbitMQEvent($e) );
 
 					/**
