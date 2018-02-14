@@ -6,7 +6,7 @@
 		"php": ">=7.0.0",
 		"illuminate/console": "^5.5",
 		"illuminate/support": "^5.5",
-		"php-amqplib/php-amqplib": "^2.7"
+		"php-amqplib/php-amqplib": "^2.6"
 	},
 	"autoload": {
 		"psr-4": {
