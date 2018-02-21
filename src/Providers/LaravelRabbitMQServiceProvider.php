@@ -83,12 +83,32 @@ class LaravelRabbitMQServiceProvider extends ServiceProvider
 		 */
 		$log = $this->app->make('log');
 
-		try {
-			$handler = $createRabbitmqLogger();
-		} catch(AMQPRuntimeException $e) {
-			$log->warning('Failed to rabbitmq for logging');
-			return;
-		}
+		$tries = 0;
+		$success = false;
+		do {
+
+			try {
+				$handler = $createRabbitmqLogger();
+				$success = true;
+			} catch(\Throwable $t) {
+				$log->warning('Failed to open rabbitmq for logging', [
+					'message' => $t->getMessage(),
+					'trace' => $t->getTraceAsString(),
+				]);
+				++$tries;
+				if($tries >= 5) {
+					$log->warning('Giving up trying to create rabbitmq for logging', [
+						'tries' => $tries,
+						'message' => $t->getMessage(),
+						'trace' => $t->getTraceAsString(),
+					]);
+
+					return;
+				}
+				sleep(1);
+			}
+
+		} while(!$success);
 
 		/**
 		 * @var Monolog $monolog
