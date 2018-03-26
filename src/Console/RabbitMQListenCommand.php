@@ -161,6 +161,5 @@ class RabbitMQListenCommand extends Command
 		}
 
 		$channel->close();
-		$this->exchangeBuilder->closeConnection($queueIdentifier);
 	}
 }
