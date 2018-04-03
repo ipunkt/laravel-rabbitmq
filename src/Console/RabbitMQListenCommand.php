@@ -8,6 +8,7 @@ use Ipunkt\LaravelRabbitMQ\EventMapper\EventMapper;
 use Ipunkt\LaravelRabbitMQ\Events\ExceptionInRabbitMQEvent;
 use Ipunkt\LaravelRabbitMQ\Events\ThrowableInRabbitMQEvent;
 use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\RabbitMQExchangeBuilder;
+use Ipunkt\LaravelRabbitMQ\TakesRoutingKey;
 
 class RabbitMQListenCommand extends Command
 {
@@ -61,7 +62,8 @@ class RabbitMQListenCommand extends Command
 		}
 
 		$callback = function ($msg) use ($queueIdentifier) {
-			$events = $this->eventMapper->map( $queueIdentifier, $msg->delivery_info['routing_key'] );
+			$routingKey = $msg->delivery_info['routing_key'];
+			$events = $this->eventMapper->map( $queueIdentifier, $routingKey );
 
 			if( empty($events) && config('laravel-rabbitmq.' . $queueIdentifier . '.durable', false) )
 				$msg->delivery_info['channel']->basic_nack($msg->delivery_info['delivery_tag']);
@@ -73,7 +75,10 @@ class RabbitMQListenCommand extends Command
 						if($event[0] !== '\\')
 							$event = '\\'.$event;
 
-						$success = event(new $event(json_decode($msg->body, true)));
+						$eventObject = new $event( json_decode( $msg->body, true ) );
+						if( $eventObject instanceof TakesRoutingKey )
+							$eventObject->setRoutingKey($routingKey);
+						$success = event( $eventObject );
 						// No EventHandlers found - message does not concern this event handler
 
 						// An EventHandler has successfully processed the message - mark done
