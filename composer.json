@@ -38,6 +38,7 @@
 		}
 	},
 	"require-dev": {
+		"laravel/framework": "5.5.*",
 		"monolog/monolog": "^1.23"
 	}
 }
