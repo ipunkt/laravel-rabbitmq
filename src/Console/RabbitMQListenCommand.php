@@ -3,9 +3,11 @@
 namespace Ipunkt\LaravelRabbitMQ\Console;
 
 use Illuminate\Console\Command;
+use Illuminate\Contracts\Logging\Log;
 use Ipunkt\LaravelRabbitMQ\EventMapper\EventMapper;
 use Ipunkt\LaravelRabbitMQ\Events\ExceptionInRabbitMQEvent;
-use PhpAmqpLib\Connection\AMQPStreamConnection;
+use Ipunkt\LaravelRabbitMQ\Events\ThrowableInRabbitMQEvent;
+use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\RabbitMQExchangeBuilder;
 
 class RabbitMQListenCommand extends Command
 {
@@ -17,14 +19,26 @@ class RabbitMQListenCommand extends Command
 	 * @var EventMapper
 	 */
 	private $eventMapper;
+	/**
+	 * @var RabbitMQExchangeBuilder
+	 */
+	private $exchangeBuilder;
+	/**
+	 * @var Log
+	 */
+	private $logger;
 
 	/**
 	 * RabbitMQListenCommand constructor.
 	 * @param EventMapper $eventMapper
+	 * @param RabbitMQExchangeBuilder $exchangeBuilder
+	 * @param Log $logger
 	 */
-	public function __construct( EventMapper $eventMapper) {
+	public function __construct( EventMapper $eventMapper, RabbitMQExchangeBuilder $exchangeBuilder, Log $logger) {
 		parent::__construct();
 		$this->eventMapper = $eventMapper;
+		$this->exchangeBuilder = $exchangeBuilder;
+		$this->logger = $logger;
 	}
 
 	public function handle()
@@ -35,31 +49,8 @@ class RabbitMQListenCommand extends Command
 			throw new \InvalidArgumentException('No queue ' . $queueIdentifier . ' configured');
 		}
 
-		$connection = new AMQPStreamConnection(
-			config('laravel-rabbitmq.' . $queueIdentifier . '.host'),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.port', 5672),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.user'),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.password')
-		);
-		$channel = $connection->channel();
-
-		$exchange = config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.exchange');
-
-		$passive = config( 'laravel-rabbitmq.' . $queueIdentifier . '.exchange.passive', false );
-		if ($this->option('declare-exchange'))
-			$passive = false;
-
-		$channel->exchange_declare(
-			$exchange,
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.type'),
-			$passive,
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.durable', false),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.auto_delete', true),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.internal', false),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.nowait', false),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.arguments'),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.ticket')
-		);
+		$channel = $this->exchangeBuilder->buildChannel($queueIdentifier);
+		$exchange = $this->exchangeBuilder->build($queueIdentifier, $this->option('declare-exchange'));
 
 		list($queue_name, ,) = $channel->queue_declare(config('laravel-rabbitmq.' . $queueIdentifier . '.name', ''), false, config('laravel-rabbitmq.' . $queueIdentifier . '.durable', false), false, false);
 
@@ -77,26 +68,68 @@ class RabbitMQListenCommand extends Command
 
 			if ($event !== null) {
 				try {
+					if($event[0] !== '\\')
+						$event = '\\'.$event;
+
 					$success = event(new $event(json_decode($msg->body, true)));
 
 					if( config('laravel-rabbitmq.' . $queueIdentifier . '.durable', false) ) {
-						if($success === true)
-							$msg->delivery_info['channel']->basic_ack($msg->delivery_info['delivery_tag']);
-						else if($success === false)
+
+						// No EventHandlers found - message does not concern us
+						if( empty($success) )
 							$msg->delivery_info['channel']->basic_nack($msg->delivery_info['delivery_tag']);
+						// An EventHandler has successfully processed the message - mark done
+						else if(in_array(true, $success))
+							$msg->delivery_info['channel']->basic_ack($msg->delivery_info['delivery_tag']);
+						// An EventHandler has marked the message as does not concern us
+						else if(in_array(false, $success) )
+							$msg->delivery_info['channel']->basic_nack($msg->delivery_info['delivery_tag']);
+
+						/**
+						 * EventHandler returned `null` or an unkown value
+						 *
+						 * Message will not be acknowledged. This will cause the message to return to the queue once
+						 * this process exits.
+						 * This behaviour is choosen here for development purposes - test your code with the same message
+						 * over and over by not returning true at the end of the handler.
+						 */
 					}
 
 				} catch(\Throwable $e) {
+					if( config('laravel-rabbitmq.logging.eventerrors', true) ) {
+
+						$this->logger->alert('Throwable in Rabbitmq eventhandler', [
+							'message' => $e->getMessage(),
+							'throwable' => $e,
+							'trace' => $e->getTrace(),
+							'traceString' => $e->getTraceAsString(),
+						]);
+
+					}
+
 					$this->error( $e->getFile().":".$e->getLine().' '. $e->getMessage() );
 					$this->error( $e->getCode() );
-					event( new ExceptionInRabbitMQEvent($e) );
+					$this->error( $e->getTraceAsString() );
+					event( new ThrowableInRabbitMQEvent($e) );
 
 					/**
 					 * Do not ack or nack the message - message will only be redelivered after a restart(-> version change)
 					 */
 				} catch(\Exception $e) {
+					if( config('laravel-rabbitmq.logging.event-errors', true) ) {
+
+						$this->logger->alert('Exception in Rabbitmq eventhandler', [
+							'message' => $e->getMessage(),
+							'exception' => $e,
+							'trace' => $e->getTraceAsString(),
+							'traceString' => $e->getTraceAsString(),
+						]);
+
+					}
+
 					$this->error( $e->getFile().":".$e->getLine().' '. $e->getMessage() );
 					$this->error( $e->getCode() );
+					$this->error( $e->getTraceAsString() );
 					event( new ExceptionInRabbitMQEvent($e) );
 
 					/**
@@ -106,13 +139,27 @@ class RabbitMQListenCommand extends Command
 			}
 		};
 
-		$channel->basic_consume($queue_name, '', false, config('laravel-rabbitmq.' . $queueIdentifier . '.durable', false), false, false, $callback);
+		$channel->basic_consume($queue_name, '', false, !config('laravel-rabbitmq.' . $queueIdentifier . '.durable', false), false, false, $callback);
 
 		while (count($channel->callbacks)) {
-			$channel->wait();
+			try {
+				$channel->wait();
+			} catch(\ErrorException $e) {
+
+				if( config('laravel-rabbitmq.logging.event-errors', true) ) {
+
+					$this->logger->alert('Exception in Rabbitmq wait', [
+						'message' => $e->getMessage(),
+						'exception' => $e,
+					]);
+
+				}
+
+				$this->error( $e->getFile().":".$e->getLine().' '. $e->getMessage() );
+				$this->error( $e->getCode() );
+			}
 		}
 
 		$channel->close();
-		$connection->close();
 	}
 }

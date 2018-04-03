@@ -1,18 +1,21 @@
 <?php namespace Ipunkt\LaravelRabbitMQ\Events;
 
+use Exception;
+use Illuminate\Foundation\Bus\Dispatchable;
+
 /**
  * Class ExceptionInRabbitMQEvent
  */
 class ExceptionInRabbitMQEvent {
 
-	use \Illuminate\Foundation\Bus\Dispatchable;
+	use Dispatchable;
 
 	/**
-	 * @var \Exception
+	 * @var Exception
 	 */
 	protected $exception;
 
-	public function __construct(\Exception $exception) {
+	public function __construct( Exception $exception) {
 		$this->exception = $exception;
 	}
 

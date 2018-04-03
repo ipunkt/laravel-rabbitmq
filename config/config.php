@@ -35,4 +35,13 @@ return [
 			//  key => event name
 		],
 	],
+	'logging' => [
+		'enable' => false,
+		/**
+		 * Set this to false if you do not wish to log Exceptions or Throwables from `rabbitmq:listen`
+		 */
+		'event-errors' => true,
+		'queue-identifier' => 'default',
+		'extra-context' => [],
+	],
 ];

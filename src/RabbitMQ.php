@@ -2,7 +2,7 @@
 
 namespace Ipunkt\LaravelRabbitMQ;
 
-use PhpAmqpLib\Connection\AMQPStreamConnection;
+use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\RabbitMQExchangeBuilder;
 use PhpAmqpLib\Message\AMQPMessage;
 
 class RabbitMQ
@@ -10,6 +10,18 @@ class RabbitMQ
 	protected $data;
 
 	protected $queue = 'default';
+	/**
+	 * @var RabbitMQExchangeBuilder
+	 */
+	private $exchangeBuilder;
+
+	/**
+	 * RabbitMQ constructor.
+	 * @param RabbitMQExchangeBuilder $exchangeBuilder
+	 */
+	public function __construct( RabbitMQExchangeBuilder $exchangeBuilder) {
+		$this->exchangeBuilder = $exchangeBuilder;
+	}
 
 	public function data(array $data) : self
 	{
@@ -35,25 +47,8 @@ class RabbitMQ
 	{
 		$queueIdentifier = $this->queue;
 
-		$connection = new AMQPStreamConnection(
-			config('laravel-rabbitmq.' . $queueIdentifier . '.host'),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.port', 5672),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.user'),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.password')
-		);
-		$channel = $connection->channel();
-
-		$channel->exchange_declare(
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.exchange'),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.type'),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.passive', false),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.durable', false),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.auto_delete', true),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.internal', false),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.nowait', false),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.arguments'),
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.ticket')
-		);
+		$channel = $this->exchangeBuilder->buildChannel($this->queue);
+		$this->exchangeBuilder->build($this->queue);
 
 		$properties = [];
 		if( config('laravel-rabbitmq.' . $queueIdentifier . '.durable') )
@@ -68,7 +63,6 @@ class RabbitMQ
 		);
 
 		$channel->close();
-		$connection->close();
 
 		return $this;
 	}
