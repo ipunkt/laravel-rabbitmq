@@ -61,81 +61,96 @@ class RabbitMQListenCommand extends Command
 		}
 
 		$callback = function ($msg) use ($queueIdentifier) {
-			$event = $this->eventMapper->map( $queueIdentifier, $msg->delivery_info['routing_key'] );
+			$events = $this->eventMapper->map( $queueIdentifier, $msg->delivery_info['routing_key'] );
 
-			if($event === null && config('laravel-rabbitmq.' . $queueIdentifier . '.durable', false) )
+			if( empty($events) && config('laravel-rabbitmq.' . $queueIdentifier . '.durable', false) )
 				$msg->delivery_info['channel']->basic_nack($msg->delivery_info['delivery_tag']);
 
-			if ($event !== null) {
-				try {
-					if($event[0] !== '\\')
-						$event = '\\'.$event;
+			$successess = [];
+			foreach($events as $event) {
 
-					$success = event(new $event(json_decode($msg->body, true)));
+					try {
+						if($event[0] !== '\\')
+							$event = '\\'.$event;
 
-					if( config('laravel-rabbitmq.' . $queueIdentifier . '.durable', false) ) {
+						$success = event(new $event(json_decode($msg->body, true)));
+						// No EventHandlers found - message does not concern this event handler
 
-						// No EventHandlers found - message does not concern us
-						if( empty($success) )
-							$msg->delivery_info['channel']->basic_nack($msg->delivery_info['delivery_tag']);
 						// An EventHandler has successfully processed the message - mark done
-						else if(in_array(true, $success))
-							$msg->delivery_info['channel']->basic_ack($msg->delivery_info['delivery_tag']);
+						if(in_array(true, $success))
+							$successess[] = true;
 						// An EventHandler has marked the message as does not concern us
 						else if(in_array(false, $success) )
-							$msg->delivery_info['channel']->basic_nack($msg->delivery_info['delivery_tag']);
+							$successess[] = false;
+						else
+							$successess[] = 'other';
+
+
+					} catch(\Throwable $e) {
+						if( config('laravel-rabbitmq.logging.eventerrors', true) ) {
+
+							$this->logger->alert('Throwable in Rabbitmq eventhandler', [
+								'message' => $e->getMessage(),
+								'throwable' => $e,
+								'trace' => $e->getTrace(),
+								'traceString' => $e->getTraceAsString(),
+							]);
+
+						}
+
+						$this->error( $e->getFile().":".$e->getLine().' '. $e->getMessage() );
+						$this->error( $e->getCode() );
+						$this->error( $e->getTraceAsString() );
+						event( new ThrowableInRabbitMQEvent($e) );
 
 						/**
-						 * EventHandler returned `null` or an unkown value
-						 *
-						 * Message will not be acknowledged. This will cause the message to return to the queue once
-						 * this process exits.
-						 * This behaviour is choosen here for development purposes - test your code with the same message
-						 * over and over by not returning true at the end of the handler.
+						 * Do not ack or nack the message - message will only be redelivered after a restart(-> version change)
 						 */
-					}
+					} catch(\Exception $e) {
+						if( config('laravel-rabbitmq.logging.event-errors', true) ) {
 
-				} catch(\Throwable $e) {
-					if( config('laravel-rabbitmq.logging.eventerrors', true) ) {
+							$this->logger->alert('Exception in Rabbitmq eventhandler', [
+								'message' => $e->getMessage(),
+								'exception' => $e,
+								'trace' => $e->getTraceAsString(),
+								'traceString' => $e->getTraceAsString(),
+							]);
 
-						$this->logger->alert('Throwable in Rabbitmq eventhandler', [
-							'message' => $e->getMessage(),
-							'throwable' => $e,
-							'trace' => $e->getTrace(),
-							'traceString' => $e->getTraceAsString(),
-						]);
+						}
 
-					}
+						$this->error( $e->getFile().":".$e->getLine().' '. $e->getMessage() );
+						$this->error( $e->getCode() );
+						$this->error( $e->getTraceAsString() );
+						event( new ExceptionInRabbitMQEvent($e) );
 
-					$this->error( $e->getFile().":".$e->getLine().' '. $e->getMessage() );
-					$this->error( $e->getCode() );
-					$this->error( $e->getTraceAsString() );
-					event( new ThrowableInRabbitMQEvent($e) );
-
-					/**
-					 * Do not ack or nack the message - message will only be redelivered after a restart(-> version change)
-					 */
-				} catch(\Exception $e) {
-					if( config('laravel-rabbitmq.logging.event-errors', true) ) {
-
-						$this->logger->alert('Exception in Rabbitmq eventhandler', [
-							'message' => $e->getMessage(),
-							'exception' => $e,
-							'trace' => $e->getTraceAsString(),
-							'traceString' => $e->getTraceAsString(),
-						]);
-
-					}
-
-					$this->error( $e->getFile().":".$e->getLine().' '. $e->getMessage() );
-					$this->error( $e->getCode() );
-					$this->error( $e->getTraceAsString() );
-					event( new ExceptionInRabbitMQEvent($e) );
-
-					/**
-					 * Do not ack or nack the message - message will only be redelivered after a restart(-> version change)
-					 */
+						/**
+						 * Do not ack or nack the message - message will only be redelivered after a restart(-> version change)
+						 */
 				}
+
+			}
+
+			if( config('laravel-rabbitmq.' . $queueIdentifier . '.durable', false) ) {
+				// No EventHandlers took the message - message does not concern us
+				if( empty($successess) )
+					$msg->delivery_info['channel']->basic_nack($msg->delivery_info['delivery_tag']);
+				// An EventHandler has successfully processed the message - mark done
+				else if(in_array(true, $success))
+					$msg->delivery_info['channel']->basic_ack($msg->delivery_info['delivery_tag']);
+				// An EventHandler has marked the message as does not concern us
+				else if(in_array(false, $success) )
+					$msg->delivery_info['channel']->basic_nack($msg->delivery_info['delivery_tag']);
+
+
+				/**
+				 * No Event Handler marked the emssage as processed or does not concern, but there was an event handler
+				 * which took the message
+				 *
+				 * Message will not be acknowledged. This will cause the message to return to the queue once
+				 * this process exits.
+				 * This behaviour is choosen here for development purposes - test your code with the same message
+				 * over and over by not returning true at the end of the handler.
+				 */
 			}
 		};
 

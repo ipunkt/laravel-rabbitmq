@@ -7,6 +7,7 @@ use Illuminate\Contracts\Logging\Log;
 use Illuminate\Support\ServiceProvider;
 use Ipunkt\LaravelRabbitMQ\Console\RabbitMQListenCommand;
 use Ipunkt\LaravelRabbitMQ\EventMapper\EventMapper;
+use Ipunkt\LaravelRabbitMQ\EventMapper\KeyToRegex;
 use Ipunkt\LaravelRabbitMQ\Logging\CreateRabbitmqLogger;
 use Ipunkt\LaravelRabbitMQ\Logging\Monolog\HandlerBuilder;
 use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\RabbitMQExchangeBuilder;
@@ -51,7 +52,7 @@ class LaravelRabbitMQServiceProvider extends ServiceProvider {
 
 				$config = config( 'laravel-rabbitmq' );
 
-				return new EventMapper( $config );
+				return new EventMapper( app(KeyToRegex::class), $config );
 
 			} );
 
