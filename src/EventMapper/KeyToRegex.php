@@ -11,11 +11,19 @@ class KeyToRegex {
 	 * @return string
 	 */
 	public function toRegex( $key ) {
-		$escapedKey = str_replace('.', '\\.', $key);
+		$escapes = [
+			'.' => '\\.',
+			'(' => '\\(',
+			')' => '\\)',
+			'$' => '\\$',
+			'^' => '\\^',
+		];
+
+		$escapedKey = str_replace(array_keys($escapes), array_values($escapes), $key);
 
 		$replacements = [
-			'*' => '[^.]+',
-			'#' => '.*',
+			'*' => '([^.]+)',
+			'#' => '(.*)',
 		];
 
 		return '~^'.str_replace(array_keys($replacements), array_values($replacements), $escapedKey).'$~';

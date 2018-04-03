@@ -85,13 +85,23 @@ For subscribing we provide an artisan command:
 php artisan rabbitmq:listen YOUR-QUEUE-IDENTIFIER
 ```
 
-We suggest the message sender creates the exchange. If you do it the other way around the listener cann create the exchange too. You need to add the command flag `--declare-exchange` to the `rabbitmq:listen` command.
+We suggest the message sender creates the exchange. If you do it the other way around the listener can create the exchange too. You need to add the command flag `--declare-exchange` to the `rabbitmq:listen` command.
 
 Within the configuration `bindings` has routing keys configured with a 1:1 mapping to a laravel event (`php artisan make:event ...`). This event gets the message data as constructor parameter.
 
 Then you can have one or more listener (`php artisan make:listen ...`) - defined in your EventListener. And voila everything works fine.
 
 We suggest running the `rabbitmq:listen` command with a [supervisor](https://laravel.com/docs/5.5/queues#supervisor-configuration) backed container like the [queue:work](https://laravel.com/docs/5.5/queues#running-the-queue-worker) command shipped with laravel.
+
+
+#### Receive routing keys in event data
+If a binding with placeholder is used it can be necessary to parse the routing key.
+
+To receive the routing key which triggered the Event to be thrown implement `Ipunkt\LaravelRabbitMQ\TakesRoutingKey` 
+with your event.
+
+To receive the values of the placeholders in your event binding matching the routing key which triggered the Event to be
+thrown implement `Ipunkt\LaravelRabbitMQ\TakesRoutingMatches`
 
 #### Persistent messages
 Setting the `durable` for a queue will cause the queue to be created durable. This means it will continue to exist - and

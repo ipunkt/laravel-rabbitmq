@@ -30,7 +30,7 @@ class EventMapper {
 	/**
 	 * @param string $queueIdentifier
 	 * @param string $rabbitMQEvent
-	 * @return string[]
+	 * @return EventMatch[]
 	 */
 	public function map( string $queueIdentifier, string $rabbitMQEvent ) {
 
@@ -41,10 +41,15 @@ class EventMapper {
 
 		$events = [];
 
-		foreach($bindings as $eventKey => $event) {
+		foreach($bindings as $eventKey => $eventClass) {
 			$regex = $this->keyToRegex->toRegex($eventKey);
-			if( preg_match($regex, $rabbitMQEvent) === 1)
-				$events[] = $event;
+			$matches = [];
+			if( preg_match($regex, $rabbitMQEvent, $matches) === 1) {
+				$match = new EventMatch();
+				$match->setEventClass($eventClass);
+				$match->setMatchedPlaceholders($matches);
+				$events[] = $match;
+			}
 		}
 
 		return $events;
