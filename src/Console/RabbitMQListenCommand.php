@@ -64,8 +64,10 @@ class RabbitMQListenCommand extends Command {
 			$routingKey = $msg->delivery_info['routing_key'];
 			$eventMatches = $this->eventMapper->map( $queueIdentifier, $routingKey );
 
-			if ( empty( $eventObjects ) && config( 'laravel-rabbitmq.' . $queueIdentifier . '.durable', false ) )
+			if ( empty( $eventMatches ) && config( 'laravel-rabbitmq.' . $queueIdentifier . '.durable', false ) ) {
 				$msg->delivery_info['channel']->basic_nack( $msg->delivery_info['delivery_tag'] );
+				return;
+			}
 
 			$successess = [];
 			foreach ( $eventMatches as $eventMatch ) {
