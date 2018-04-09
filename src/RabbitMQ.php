@@ -10,10 +10,21 @@ class RabbitMQ
 	protected $data;
 
 	protected $queue = 'default';
+
 	/**
 	 * @var RabbitMQExchangeBuilder
 	 */
 	private $exchangeBuilder;
+
+	/**
+	 * Return from event handler to indicate the message was successfully processed
+	 */
+	const TAKEN = true;
+
+	/**
+	 * Return from an event handler to indicate the message was not processed by this handler
+	 */
+	const IGNORED = false;
 
 	/**
 	 * RabbitMQ constructor.
