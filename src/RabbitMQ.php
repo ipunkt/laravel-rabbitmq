@@ -12,6 +12,18 @@ class RabbitMQ
 	protected $queue = 'default';
 
 	/**
+	 * Message limit on connections is 65535 (4 byte unsigned int) because ids are unsigned int and are not reused
+	 *
+	 * @var int
+	 */
+	protected $messagesPerConnection = 60000;
+
+	/**
+	 * @var MessageCounter[]
+	 */
+	protected $messageCounters = [];
+
+	/**
 	 * @var RabbitMQExchangeBuilder
 	 */
 	private $exchangeBuilder;
@@ -58,8 +70,7 @@ class RabbitMQ
 	{
 		$queueIdentifier = $this->queue;
 
-		$channel = $this->exchangeBuilder->buildChannel($this->queue);
-		$this->exchangeBuilder->build($this->queue);
+		$messageCounter = $this->getMessageCounter( $queueIdentifier );
 
 		$properties = [];
 		if( config('laravel-rabbitmq.' . $queueIdentifier . '.durable') )
@@ -67,14 +78,44 @@ class RabbitMQ
 
 		$msg = new AMQPMessage(json_encode($this->data), $properties);
 
-		$channel->basic_publish(
+		$messageCounter->getChannel()->basic_publish(
 			$msg,
 			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.exchange'),
 			$routingKey
 		);
 
-		$channel->close();
+		$messageCounter->increaseCounter();
 
 		return $this;
+	}
+
+	/**
+	 * @param $queueIdentifier
+	 * @return MessageCounter
+	 */
+	protected function getMessageCounter( $queueIdentifier ): array {
+
+		if ( !array_key_exists( $queueIdentifier, $this->messageCounters ) ) {
+
+			$messageCounter = new MessageCounter( $queueIdentifier );
+
+			$channel = $this->exchangeBuilder->buildChannel( $queueIdentifier );
+			$this->exchangeBuilder->build( $queueIdentifier );
+
+			$messageCounter->setChannel( $channel );
+			$this->messageCounters[$queueIdentifier] = $messageCounter;
+
+		}
+
+		$messageCounter = $this->messageCounters[$queueIdentifier];
+		if ( $messageCounter->getCounter() > $this->messagesPerConnection ) {
+
+			$messageCounter->getChannel()->close();
+
+			$channel = $this->exchangeBuilder->buildChannel( $queueIdentifier );
+			$messageCounter->setChannel( $channel );
+		}
+
+		return $messageCounter;
 	}
 }
