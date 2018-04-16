@@ -93,7 +93,7 @@ class RabbitMQ
 	 * @param $queueIdentifier
 	 * @return MessageCounter
 	 */
-	protected function getMessageCounter( $queueIdentifier ): array {
+	protected function getMessageCounter( $queueIdentifier ) : MessageCounter {
 
 		if ( !array_key_exists( $queueIdentifier, $this->messageCounters ) ) {
 
