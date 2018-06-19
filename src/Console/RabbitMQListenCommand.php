@@ -3,7 +3,7 @@
 namespace Ipunkt\LaravelRabbitMQ\Console;
 
 use Illuminate\Console\Command;
-use Illuminate\Contracts\Logging\Log;
+use Illuminate\Log\LogManager;
 use Ipunkt\LaravelRabbitMQ\EventMapper\EventMapper;
 use Ipunkt\LaravelRabbitMQ\Events\ExceptionInRabbitMQEvent;
 use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\RabbitMQExchangeBuilder;
@@ -23,8 +23,9 @@ class RabbitMQListenCommand extends Command {
 	 * @var RabbitMQExchangeBuilder
 	 */
 	private $exchangeBuilder;
+
 	/**
-	 * @var Log
+	 * @var LogManager
 	 */
 	private $logger;
 
@@ -34,7 +35,7 @@ class RabbitMQListenCommand extends Command {
 	 * @param RabbitMQExchangeBuilder $exchangeBuilder
 	 * @param Log $logger
 	 */
-	public function __construct( EventMapper $eventMapper, RabbitMQExchangeBuilder $exchangeBuilder, Log $logger ) {
+	public function __construct( EventMapper $eventMapper, RabbitMQExchangeBuilder $exchangeBuilder, LogManager $logger ) {
 		parent::__construct();
 		$this->eventMapper = $eventMapper;
 		$this->exchangeBuilder = $exchangeBuilder;
