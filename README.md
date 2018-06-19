@@ -6,6 +6,9 @@ We provide a separate package for the use of [RabbitMQ](https://www.rabbitmq.com
 
 This package provides the sending part as well as the listener part. The sending part sends synchronously to the message queue. The listener maps routing keys to an event listener configured.
 
+## Branch Info
+This branch is for use with laravel 5.4 because laravel 5.6 changed the interfaces for logging
+
 ## Quickstart
 
 ```
