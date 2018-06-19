@@ -73,14 +73,14 @@ class RabbitMQ
 		$messageCounter = $this->getMessageCounter( $queueIdentifier );
 
 		$properties = [];
-		if( config('laravel-rabbitmq.' . $queueIdentifier . '.durable') )
+		if( config('laravel-rabbitmq.queues' . $queueIdentifier . '.durable') )
 			$properties['delivery_mode'] = AMQPMessage::DELIVERY_MODE_PERSISTENT;
 
 		$msg = new AMQPMessage(json_encode($this->data), $properties);
 
 		$messageCounter->getChannel()->basic_publish(
 			$msg,
-			config('laravel-rabbitmq.' . $queueIdentifier . '.exchange.exchange'),
+			config('laravel-rabbitmq.queues.' . $queueIdentifier . '.exchange.exchange'),
 			$routingKey
 		);
 

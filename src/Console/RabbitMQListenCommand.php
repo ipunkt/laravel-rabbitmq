@@ -45,16 +45,16 @@ class RabbitMQListenCommand extends Command {
 	public function handle() {
 		$queueIdentifier = $this->argument( 'queue' );
 
-		if ( config( 'laravel-rabbitmq.' . $queueIdentifier ) === null ) {
+		if ( config( 'laravel-rabbitmq.queues.' . $queueIdentifier ) === null ) {
 			throw new \InvalidArgumentException( 'No queue ' . $queueIdentifier . ' configured' );
 		}
 
 		$channel = $this->exchangeBuilder->buildChannel( $queueIdentifier );
 		$exchange = $this->exchangeBuilder->build( $queueIdentifier, $this->option( 'declare-exchange' ) );
 
-		list( $queue_name, , ) = $channel->queue_declare( config( 'laravel-rabbitmq.' . $queueIdentifier . '.name', '' ), false, $this->isDurable($queueIdentifier), false, false );
+		list( $queue_name, , ) = $channel->queue_declare( config( 'laravel-rabbitmq.queues.' . $queueIdentifier . '.name', '' ), false, $this->isDurable($queueIdentifier), false, false );
 
-		$binding_keys = config( 'laravel-rabbitmq.' . $queueIdentifier . '.bindings', [] );
+		$binding_keys = config( 'laravel-rabbitmq.queues.' . $queueIdentifier . '.bindings', [] );
 		foreach ( $binding_keys as $binding_key => $event ) {
 			$channel->queue_bind( $queue_name, $exchange,
 				$binding_key );
@@ -148,7 +148,7 @@ class RabbitMQListenCommand extends Command {
 	 * @return bool
 	 */
 	protected function isDurable($queueIdentifier) {
-		return (bool)config( 'laravel-rabbitmq.' . $queueIdentifier . '.durable', false );
+		return (bool)config( 'laravel-rabbitmq.queues.' . $queueIdentifier . '.durable', false );
 	}
 
 	/**
