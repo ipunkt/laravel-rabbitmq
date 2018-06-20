@@ -34,7 +34,7 @@ class EventMapper {
 	 */
 	public function map( string $queueIdentifier, string $rabbitMQEvent ) {
 
-		$bindings = array_get($this->config,'quques.'.$queueIdentifier.'.bindings');
+		$bindings = array_get($this->config,$queueIdentifier.'.bindings');
 
 		if( !is_array($bindings) )
 			return [];
