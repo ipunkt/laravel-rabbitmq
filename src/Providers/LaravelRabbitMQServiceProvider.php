@@ -27,7 +27,7 @@ class LaravelRabbitMQServiceProvider extends ServiceProvider {
 		);
 
 		$this->app->singleton( RabbitMQExchangeBuilder::class, function () {
-			return new RabbitMQExchangeBuilder( config( 'laravel-rabbitmq' ) );
+			return new RabbitMQExchangeBuilder( config( 'laravel-rabbitmq.queues' ) );
 		} );
 
 		$this->app->bind( CreateRabbitmqLogger::class, function () {
@@ -106,12 +106,7 @@ class LaravelRabbitMQServiceProvider extends ServiceProvider {
 
 		} while ( !$success );
 
-		/**
-		 * @var Monolog $monolog
-		 */
-		$monolog = $log->getMonolog();
-
-		$monolog->pushHandler( $handler );
+		$log->pushHandler( $handler );
 	}
 
 	/**

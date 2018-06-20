@@ -18,7 +18,7 @@ class RabbitMQExchangeBuilder {
 	 * RabbitMQExchangeBuilder constructor.
 	 * @param array $configuration
 	 */
-	private $configPrefix = 'queues.';
+	private $configPrefix = '';
 
 	public function __construct( array $configuration ) {
 		$this->configuration = $configuration;
