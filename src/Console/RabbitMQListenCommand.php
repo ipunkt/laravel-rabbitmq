@@ -4,6 +4,7 @@ namespace Ipunkt\LaravelRabbitMQ\Console;
 
 use Illuminate\Console\Command;
 use Illuminate\Log\LogManager;
+use Ipunkt\LaravelRabbitMQ\DropsEvent;
 use Ipunkt\LaravelRabbitMQ\EventMapper\EventMapper;
 use Ipunkt\LaravelRabbitMQ\Events\ExceptionInRabbitMQEvent;
 use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\RabbitMQExchangeBuilder;
@@ -52,7 +53,7 @@ class RabbitMQListenCommand extends Command {
 		$channel = $this->exchangeBuilder->buildChannel( $queueIdentifier );
 		$exchange = $this->exchangeBuilder->build( $queueIdentifier, $this->option( 'declare-exchange' ) );
 
-		list( $queue_name, , ) = $channel->queue_declare( config( 'laravel-rabbitmq.queues.' . $queueIdentifier . '.name', '' ), false, $this->isDurable($queueIdentifier), false, false );
+		list( $queue_name, , ) = $channel->queue_declare( config( 'laravel-rabbitmq.queues.' . $queueIdentifier . '.name', '' ), false, $this->isDurable( $queueIdentifier ), false, false );
 
 		$binding_keys = config( 'laravel-rabbitmq.queues.' . $queueIdentifier . '.bindings', [] );
 		foreach ( $binding_keys as $binding_key => $event ) {
@@ -64,7 +65,7 @@ class RabbitMQListenCommand extends Command {
 			$routingKey = $msg->delivery_info['routing_key'];
 			$eventMatches = $this->eventMapper->map( $queueIdentifier, $routingKey );
 
-			if ( empty( $eventMatches ) && $this->isDurable($queueIdentifier) ) {
+			if ( empty( $eventMatches ) && $this->isDurable( $queueIdentifier ) ) {
 				// Reject message
 				$msg->delivery_info['channel']->basic_nack( $msg->delivery_info['delivery_tag'], false, false );
 				return;
@@ -89,12 +90,12 @@ class RabbitMQListenCommand extends Command {
 
 				} catch ( \Throwable $e ) {
 
-					$this->handleException($queueIdentifier, $msg, $e);
+					$this->handleException( $queueIdentifier, $msg, $e );
 
 					return;
 
 				} catch ( \Exception $e ) {
-					$this->handleException($queueIdentifier, $msg, $e);
+					$this->handleException( $queueIdentifier, $msg, $e );
 
 					return;
 
@@ -102,9 +103,9 @@ class RabbitMQListenCommand extends Command {
 
 			}
 
-			if ( $this->isDurable($queueIdentifier) ) {
+			if ( $this->isDurable( $queueIdentifier ) ) {
 
-				if( $messageStatus->takenEncountered() ) {
+				if ( $messageStatus->takenEncountered() ) {
 
 					// acknowledge message as having been processed
 					$msg->delivery_info['channel']->basic_ack( $msg->delivery_info['delivery_tag'] );
@@ -119,7 +120,7 @@ class RabbitMQListenCommand extends Command {
 
 		};
 
-		$channel->basic_consume( $queue_name, '', false, !$this->isDurable($queueIdentifier), false, false, $callback );
+		$channel->basic_consume( $queue_name, '', false, !$this->isDurable( $queueIdentifier ), false, false, $callback );
 
 		while ( count( $channel->callbacks ) ) {
 			try {
@@ -147,7 +148,7 @@ class RabbitMQListenCommand extends Command {
 	 * @param string $queue
 	 * @return bool
 	 */
-	protected function isDurable($queueIdentifier) {
+	protected function isDurable( $queueIdentifier ) {
 		return (bool)config( 'laravel-rabbitmq.queues.' . $queueIdentifier . '.durable', false );
 	}
 
@@ -175,13 +176,13 @@ class RabbitMQListenCommand extends Command {
 		event( new ExceptionInRabbitMQEvent( $e ) );
 
 		// Nack the message if the Exception indicates the event should be dropped
-		if( $this->isDurable($queueIdentifier) && $e instanceof DropsEvent) {
+		if ( $this->isDurable( $queueIdentifier ) && $e instanceof DropsEvent ) {
 			$msg->delivery_info['channel']->basic_nack( $msg->delivery_info['delivery_tag'], false, false );
 			return;
 		}
 
 		// Requeue message
-		if( $this->isDurable($queueIdentifier) ) {
+		if ( $this->isDurable( $queueIdentifier ) ) {
 			$msg->delivery_info['channel']->basic_nack( $msg->delivery_info['delivery_tag'], false, true );
 			return;
 		}
