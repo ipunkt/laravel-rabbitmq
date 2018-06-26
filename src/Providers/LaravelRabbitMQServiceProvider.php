@@ -27,7 +27,7 @@ class LaravelRabbitMQServiceProvider extends ServiceProvider {
 		);
 
 		$this->app->singleton( RabbitMQExchangeBuilder::class, function () {
-			return new RabbitMQExchangeBuilder( config( 'laravel-rabbitmq' ) );
+			return new RabbitMQExchangeBuilder( config( 'laravel-rabbitmq.queues' ) );
 		} );
 
 		$this->app->bind( CreateRabbitmqLogger::class, function () {
@@ -35,9 +35,9 @@ class LaravelRabbitMQServiceProvider extends ServiceProvider {
 
 			$queueIdentifier = config( 'laravel-rabbitmq.logging.queue-identifier' );
 
-			$exchangeName = config( 'laravel-rabbitmq.' . $queueIdentifier . '.exchange.exchange' );
+			$exchangeName = config( 'laravel-rabbitmq.queues.' . $queueIdentifier . '.exchange.exchange' );
 
-			$extraContext = config( 'laravel-rabbitmq.' . $queueIdentifier . '.extra-context', [] );
+			$extraContext = config( 'laravel-rabbitmq.queues.' . $queueIdentifier . '.extra-context', [] );
 
 			return new CreateRabbitmqLogger( $builder, $queueIdentifier, $exchangeName, $extraContext );
 		} );
@@ -50,7 +50,7 @@ class LaravelRabbitMQServiceProvider extends ServiceProvider {
 
 			$this->app->bind( EventMapper::class, function () {
 
-				$config = config( 'laravel-rabbitmq' );
+				$config = config( 'laravel-rabbitmq.queues' );
 
 				return new EventMapper( app(KeyToRegex::class), $config );
 
@@ -106,12 +106,7 @@ class LaravelRabbitMQServiceProvider extends ServiceProvider {
 
 		} while ( !$success );
 
-		/**
-		 * @var Monolog $monolog
-		 */
-		$monolog = $log->getMonolog();
-
-		$monolog->pushHandler( $handler );
+		$log->pushHandler( $handler );
 	}
 
 	/**

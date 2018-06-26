@@ -1,6 +1,6 @@
 <?php namespace Ipunkt\LaravelRabbitMQ\Logging\Monolog;
 
-use Illuminate\Contracts\Logging\Log;
+use Illuminate\Log\LogManager;
 use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\RabbitMQExchangeBuilder;
 
 /**
@@ -22,7 +22,7 @@ class HandlerBuilder {
 	 * @param RabbitMQExchangeBuilder $exchangeBuilder
 	 * @param Log $log
 	 */
-	public function __construct( RabbitMQExchangeBuilder $exchangeBuilder, Log $log) {
+	public function __construct( RabbitMQExchangeBuilder $exchangeBuilder, LogManager $log) {
 		$this->exchangeBuilder = $exchangeBuilder;
 		$this->log = $log;
 	}
