@@ -3,7 +3,8 @@
 namespace Ipunkt\LaravelRabbitMQ\Console;
 
 use Illuminate\Console\Command;
-use Illuminate\Contracts\Logging\Log;
+use Illuminate\Log\LogManager;
+use Ipunkt\LaravelRabbitMQ\DropsEvent;
 use Ipunkt\LaravelRabbitMQ\EventMapper\EventMapper;
 use Ipunkt\LaravelRabbitMQ\Events\ExceptionInRabbitMQEvent;
 use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\RabbitMQExchangeBuilder;
@@ -24,7 +25,7 @@ class RabbitMQListenCommand extends Command {
 	 */
 	private $exchangeBuilder;
 	/**
-	 * @var Log
+	 * @var LogManager
 	 */
 	private $logger;
 
@@ -32,9 +33,9 @@ class RabbitMQListenCommand extends Command {
 	 * RabbitMQListenCommand constructor.
 	 * @param EventMapper $eventMapper
 	 * @param RabbitMQExchangeBuilder $exchangeBuilder
-	 * @param Log $logger
+	 * @param LogManager $logger
 	 */
-	public function __construct( EventMapper $eventMapper, RabbitMQExchangeBuilder $exchangeBuilder, Log $logger ) {
+	public function __construct( EventMapper $eventMapper, RabbitMQExchangeBuilder $exchangeBuilder, LogManager $logger ) {
 		parent::__construct();
 		$this->eventMapper = $eventMapper;
 		$this->exchangeBuilder = $exchangeBuilder;
@@ -173,9 +174,17 @@ class RabbitMQListenCommand extends Command {
 		$this->error( $e->getTraceAsString() );
 		event( new ExceptionInRabbitMQEvent( $e ) );
 
+		// Nack the message if the Exception indicates the event should be dropped
+		if( $this->isDurable($queueIdentifier) && $e instanceof DropsEvent) {
+			$msg->delivery_info['channel']->basic_nack( $msg->delivery_info['delivery_tag'], false, false );
+			return;
+		}
+
 		// Requeue message
-		if( $this->isDurable($queueIdentifier) )
+		if( $this->isDurable($queueIdentifier) ) {
 			$msg->delivery_info['channel']->basic_nack( $msg->delivery_info['delivery_tag'], false, true );
+			return;
+		}
 
 	}
 }
