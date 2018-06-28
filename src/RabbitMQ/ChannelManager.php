@@ -1,6 +1,7 @@
-<?php namespace Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder;
+<?php namespace Ipunkt\LaravelRabbitMQ\RabbitMQ;
 
 use Ipunkt\LaravelRabbitMQ\MessageCounter;
+use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\RabbitMQExchangeBuilder;
 
 /**
  * Class ChannelManager

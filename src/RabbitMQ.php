@@ -2,7 +2,7 @@
 
 namespace Ipunkt\LaravelRabbitMQ;
 
-use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\ChannelManager;
+use Ipunkt\LaravelRabbitMQ\RabbitMQ\ChannelManager;
 use PhpAmqpLib\Message\AMQPMessage;
 
 /**
