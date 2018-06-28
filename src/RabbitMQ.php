@@ -2,7 +2,7 @@
 
 namespace Ipunkt\LaravelRabbitMQ;
 
-use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\RabbitMQExchangeBuilder;
+use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\ChannelManager;
 use PhpAmqpLib\Message\AMQPMessage;
 
 /**
@@ -15,23 +15,6 @@ class RabbitMQ {
 	protected $queue = 'default';
 
 	/**
-	 * Message limit on connections is 65535 (4 byte unsigned int) because ids are unsigned int and are not reused
-	 *
-	 * @var int
-	 */
-	protected $messagesPerConnection = 60000;
-
-	/**
-	 * @var MessageCounter[]
-	 */
-	protected static $messageCounters = [];
-
-	/**
-	 * @var RabbitMQExchangeBuilder
-	 */
-	private $exchangeBuilder;
-
-	/**
 	 * Return from event handler to indicate the message was successfully processed
 	 */
 	const TAKEN = true;
@@ -42,18 +25,24 @@ class RabbitMQ {
 	const IGNORED = false;
 
 	/**
-	 * RabbitMQ constructor.
-	 * @param RabbitMQExchangeBuilder $exchangeBuilder
+	 * @var ChannelManager
 	 */
-	public function __construct( RabbitMQExchangeBuilder $exchangeBuilder ) {
-		$this->exchangeBuilder = $exchangeBuilder;
+	private $channelManager;
+
+	/**
+	 * RabbitMQ constructor.
+	 * @property ChannelManager
+	 * @param ChannelManager $channelManager
+	 */
+	public function __construct( ChannelManager $channelManager ) {
+		$this->channelManager = $channelManager;
 	}
 
 	/**
 	 * @param self $base
 	 */
 	protected static function copy( self $base ) {
-		$new = new self( $base->exchangeBuilder );
+		$new = new self( $base->channelManager );
 
 		$new->data = $base->data;
 		$new->queue = $base->queue;
@@ -86,7 +75,7 @@ class RabbitMQ {
 	public function publish( string $routingKey ): self {
 		$queueIdentifier = $this->queue;
 
-		$messageCounter = $this->getMessageCounter( $queueIdentifier );
+		$messageCounter = $this->channelManager->getMessageCounter( $queueIdentifier );
 
 		$properties = [];
 		if ( config( 'laravel-rabbitmq.queues' . $queueIdentifier . '.durable' ) )
@@ -105,34 +94,5 @@ class RabbitMQ {
 		return $this;
 	}
 
-	/**
-	 * @param $queueIdentifier
-	 * @return MessageCounter
-	 */
-	protected function getMessageCounter( $queueIdentifier ): MessageCounter {
-
-		if ( !array_key_exists( $queueIdentifier, self::$messageCounters ) ) {
-
-			$messageCounter = new MessageCounter( $queueIdentifier );
-
-			$channel = $this->exchangeBuilder->buildChannel( $queueIdentifier );
-			$this->exchangeBuilder->build( $queueIdentifier );
-
-			$messageCounter->setChannel( $channel );
-			self::$messageCounters[$queueIdentifier] = $messageCounter;
-
-		}
-
-		$messageCounter = self::$messageCounters[$queueIdentifier];
-		if ( $messageCounter->getCounter() > $this->messagesPerConnection ) {
-
-			$messageCounter->getChannel()->close();
-
-			$channel = $this->exchangeBuilder->buildChannel( $queueIdentifier );
-			$messageCounter->setChannel( $channel );
-		}
-
-		return $messageCounter;
-	}
 
 }
