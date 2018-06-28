@@ -1,5 +1,7 @@
-<?php
-namespace Ipunkt\LaravelRabbitMQ\EventMapper;
+<?php namespace Ipunkt\LaravelRabbitMQ\EventMapper;
+
+use Ipunkt\LaravelRabbitMQ\Config\BindingConfig;
+use Ipunkt\LaravelRabbitMQ\Config\ConfigManager;
 
 /**
  * Class EventMapper
@@ -9,22 +11,22 @@ namespace Ipunkt\LaravelRabbitMQ\EventMapper;
  */
 class EventMapper {
 	/**
-	 * @var array
-	 */
-	private $config;
-	/**
 	 * @var KeyToRegex
 	 */
 	private $keyToRegex;
+	/**
+	 * @var ConfigManager
+	 */
+	private $configManager;
 
 	/**
 	 * EventMapper constructor.
 	 * @param KeyToRegex $keyToRegex
-	 * @param array $config
+	 * @param ConfigManager $configManager
 	 */
-	public function __construct( KeyToRegex $keyToRegex, array $config ) {
-		$this->config = $config;
+	public function __construct( KeyToRegex $keyToRegex, ConfigManager $configManager ) {
 		$this->keyToRegex = $keyToRegex;
+		$this->configManager = $configManager;
 	}
 
 	/**
@@ -34,21 +36,28 @@ class EventMapper {
 	 */
 	public function map( string $queueIdentifier, string $rabbitMQEvent ) {
 
-		$bindings = array_get($this->config,$queueIdentifier.'.bindings');
+		$queue = $this->configManager->getQueue( $queueIdentifier );
+		$boundExchanges = $queue->getBindings();
 
-		if( !is_array($bindings) )
+		if ( !is_array( $boundExchanges ) )
 			return [];
 
 		$events = [];
 
-		foreach($bindings as $eventKey => $eventClass) {
-			$regex = $this->keyToRegex->toRegex($eventKey);
-			$matches = [];
-			if( preg_match($regex, $rabbitMQEvent, $matches) === 1) {
-				$match = new EventMatch();
-				$match->setEventClass($eventClass);
-				$match->setMatchedPlaceholders($matches);
-				$events[] = $match;
+		foreach ( $boundExchanges as $exchangeIdentifier => $bindings ) {
+
+			/**
+			 * @var BindingConfig[] $bindings
+			 */
+			foreach ( $bindings as $binding ) {
+				$regex = $this->keyToRegex->toRegex( $binding->getRoutingKey() );
+				$matches = [];
+				if ( preg_match( $regex, $rabbitMQEvent, $matches ) === 1 ) {
+					$match = new EventMatch();
+					$match->setEventClass( $binding->getEventClasspath() );
+					$match->setMatchedPlaceholders( $matches );
+					$events[] = $match;
+				}
 			}
 		}
 

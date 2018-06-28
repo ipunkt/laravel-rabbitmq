@@ -1,6 +1,5 @@
 <?php namespace Ipunkt\LaravelRabbitMQ\Events;
 
-use Exception;
 use Illuminate\Foundation\Bus\Dispatchable;
 
 /**
@@ -11,16 +10,16 @@ class ExceptionInRabbitMQEvent {
 	use Dispatchable;
 
 	/**
-	 * @var Exception
+	 * @var \Throwable
 	 */
 	protected $exception;
 
-	public function __construct( Exception $exception) {
+	public function __construct( \Throwable $exception) {
 		$this->exception = $exception;
 	}
 
 	/**
-	 * @return Exception
+	 * @return \Throwable
 	 */
 	public function getException() {
 		return $this->exception;

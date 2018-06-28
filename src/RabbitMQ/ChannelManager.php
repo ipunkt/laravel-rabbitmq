@@ -1,7 +1,6 @@
 <?php namespace Ipunkt\LaravelRabbitMQ\RabbitMQ;
 
-use Ipunkt\LaravelRabbitMQ\MessageCounter;
-use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\RabbitMQExchangeBuilder;
+use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\ExchangeBuilder;
 
 /**
  * Class ChannelManager
@@ -27,42 +26,42 @@ class ChannelManager {
 	 */
 	protected $messageCounters = [];
 	/**
-	 * @var RabbitMQExchangeBuilder
+	 * @var ExchangeBuilder
 	 */
 	private $exchangeBuilder;
 
 	/**
 	 * ChannelManager constructor.
-	 * @param RabbitMQExchangeBuilder $exchangeBuilder
+	 * @param ExchangeBuilder $exchangeBuilder
 	 */
-	public function __construct( RabbitMQExchangeBuilder $exchangeBuilder ) {
+	public function __construct( ExchangeBuilder $exchangeBuilder ) {
 		$this->exchangeBuilder = $exchangeBuilder;
 	}
 
 	/**
-	 * @param $queueIdentifier
+	 * @param $exchangeIdentifier
 	 * @return MessageCounter
 	 */
-	public function getMessageCounter( $queueIdentifier ): MessageCounter {
+	public function getMessageCounter( string $exchangeIdentifier ): MessageCounter {
 
-		if ( !array_key_exists( $queueIdentifier, $this->messageCounters ) ) {
+		if ( !array_key_exists( $exchangeIdentifier, $this->messageCounters ) ) {
 
-			$messageCounter = new MessageCounter( $queueIdentifier );
+			$messageCounter = new MessageCounter( $exchangeIdentifier );
 
-			$channel = $this->exchangeBuilder->buildChannel( $queueIdentifier );
-			$this->exchangeBuilder->build( $queueIdentifier );
+			$channel = $this->exchangeBuilder->buildChannel( $exchangeIdentifier );
+			$this->exchangeBuilder->buildExchange( $exchangeIdentifier, $channel );
 
 			$messageCounter->setChannel( $channel );
-			$this->messageCounters[$queueIdentifier] = $messageCounter;
+			$this->messageCounters[$exchangeIdentifier] = $messageCounter;
 
 		}
 
-		$messageCounter = $this->messageCounters[$queueIdentifier];
+		$messageCounter = $this->messageCounters[$exchangeIdentifier];
 		if ( $messageCounter->getCounter() > $this->messagesPerConnection ) {
 
 			$messageCounter->getChannel()->close();
 
-			$channel = $this->exchangeBuilder->buildChannel( $queueIdentifier );
+			$channel = $this->exchangeBuilder->buildChannel( $exchangeIdentifier );
 			$messageCounter->setChannel( $channel );
 		}
 

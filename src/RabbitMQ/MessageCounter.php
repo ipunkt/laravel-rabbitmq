@@ -1,4 +1,4 @@
-<?php namespace Ipunkt\LaravelRabbitMQ;
+<?php namespace Ipunkt\LaravelRabbitMQ\RabbitMQ;
 
 use PhpAmqpLib\Channel\AMQPChannel;
 

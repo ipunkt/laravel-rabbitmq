@@ -3,14 +3,18 @@
 namespace Ipunkt\LaravelRabbitMQ\Providers;
 
 use Illuminate\Contracts\Foundation\Application;
-use Illuminate\Contracts\Logging\Log;
+use Illuminate\Log\LogManager;
 use Illuminate\Support\ServiceProvider;
+use Ipunkt\LaravelRabbitMQ\Config\ConfigManager;
 use Ipunkt\LaravelRabbitMQ\Console\RabbitMQListenCommand;
 use Ipunkt\LaravelRabbitMQ\EventMapper\EventMapper;
 use Ipunkt\LaravelRabbitMQ\EventMapper\KeyToRegex;
 use Ipunkt\LaravelRabbitMQ\Logging\CreateRabbitmqLogger;
 use Ipunkt\LaravelRabbitMQ\Logging\Monolog\HandlerBuilder;
-use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\RabbitMQExchangeBuilder;
+use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\ChannelBuilder;
+use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\ConnectionBuilder;
+use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\ExchangeBuilder;
+use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\QueueBuilder;
 
 class LaravelRabbitMQServiceProvider extends ServiceProvider {
 	/**
@@ -26,8 +30,12 @@ class LaravelRabbitMQServiceProvider extends ServiceProvider {
 			$this->packagePath( 'config/config.php' ), 'laravel-rabbitmq'
 		);
 
-		$this->app->singleton( RabbitMQExchangeBuilder::class, function () {
-			return new RabbitMQExchangeBuilder( config( 'laravel-rabbitmq.queues' ) );
+		$this->app->bind( ConfigManager::class, function () {
+			$configManager = new ConfigManager();
+
+			$configManager->parse( config( 'laravel-rabbitmq' ) );
+
+			return $configManager;
 		} );
 
 		$this->app->bind( CreateRabbitmqLogger::class, function () {
@@ -52,12 +60,16 @@ class LaravelRabbitMQServiceProvider extends ServiceProvider {
 
 				$config = config( 'laravel-rabbitmq.queues' );
 
-				return new EventMapper( app(KeyToRegex::class), $config );
+				return new EventMapper( app( KeyToRegex::class ), $config );
 
 			} );
 
 			$this->app->singleton( RabbitMQListenCommand::class, function ( Application $app ) {
-				return new RabbitMQListenCommand( $app->make( EventMapper::class ), $app->make( RabbitMQExchangeBuilder::class ), $app->make( 'log' ) );
+				return new RabbitMQListenCommand(
+					$app->make( EventMapper::class ), $app->make( ConnectionBuilder::class ),
+					$app->make(ChannelBuilder::class), $app->make( ExchangeBuilder::class ),
+					$app->make(QueueBuilder::class),
+					$app->make(ConfigManager::class), $app->make( 'log' ) );
 			} );
 
 			$this->commands( RabbitMQListenCommand::class );
@@ -75,7 +87,7 @@ class LaravelRabbitMQServiceProvider extends ServiceProvider {
 		$createRabbitmqLogger = $this->app->make( CreateRabbitmqLogger::class );
 
 		/**
-		 * @var Log $log
+		 * @var LogManager $log
 		 */
 		$log = $this->app->make( 'log' );
 
