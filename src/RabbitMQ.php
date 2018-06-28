@@ -5,8 +5,11 @@ namespace Ipunkt\LaravelRabbitMQ;
 use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\RabbitMQExchangeBuilder;
 use PhpAmqpLib\Message\AMQPMessage;
 
-class RabbitMQ
-{
+/**
+ * Class RabbitMQ
+ * @package Ipunkt\LaravelRabbitMQ
+ */
+class RabbitMQ {
 	protected $data;
 
 	protected $queue = 'default';
@@ -21,7 +24,7 @@ class RabbitMQ
 	/**
 	 * @var MessageCounter[]
 	 */
-	protected $messageCounters = [];
+	protected static $messageCounters = [];
 
 	/**
 	 * @var RabbitMQExchangeBuilder
@@ -42,22 +45,36 @@ class RabbitMQ
 	 * RabbitMQ constructor.
 	 * @param RabbitMQExchangeBuilder $exchangeBuilder
 	 */
-	public function __construct( RabbitMQExchangeBuilder $exchangeBuilder) {
+	public function __construct( RabbitMQExchangeBuilder $exchangeBuilder ) {
 		$this->exchangeBuilder = $exchangeBuilder;
 	}
 
-	public function data(array $data) : self
-	{
-		$this->data = $data;
+	/**
+	 * @param self $base
+	 */
+	protected static function copy( self $base ) {
+		$new = new self( $base->exchangeBuilder );
 
-		return $this;
+		$new->data = $base->data;
+		$new->queue = $base->queue;
+
+		return $new;
 	}
 
-	public function onQueue(string $queue) : self
-	{
-		$this->queue = $queue;
+	public function data( array $data ): self {
+		$new = self::copy($this);
 
-		return $this;
+		$new->data = $data;
+
+		return $new;
+	}
+
+	public function onQueue( string $queue ): self {
+		$new = self::copy($this);
+
+		$new->queue = $queue;
+
+		return $new;
 	}
 
 	/**
@@ -66,21 +83,20 @@ class RabbitMQ
 	 * @param string $routingKey
 	 * @return RabbitMQ
 	 */
-	public function publish(string $routingKey) : self
-	{
+	public function publish( string $routingKey ): self {
 		$queueIdentifier = $this->queue;
 
 		$messageCounter = $this->getMessageCounter( $queueIdentifier );
 
 		$properties = [];
-		if( config('laravel-rabbitmq.queues' . $queueIdentifier . '.durable') )
+		if ( config( 'laravel-rabbitmq.queues' . $queueIdentifier . '.durable' ) )
 			$properties['delivery_mode'] = AMQPMessage::DELIVERY_MODE_PERSISTENT;
 
-		$msg = new AMQPMessage(json_encode($this->data), $properties);
+		$msg = new AMQPMessage( json_encode( $this->data ), $properties );
 
 		$messageCounter->getChannel()->basic_publish(
 			$msg,
-			config('laravel-rabbitmq.queues.' . $queueIdentifier . '.exchange.exchange'),
+			config( 'laravel-rabbitmq.queues.' . $queueIdentifier . '.exchange.exchange' ),
 			$routingKey
 		);
 
@@ -93,9 +109,9 @@ class RabbitMQ
 	 * @param $queueIdentifier
 	 * @return MessageCounter
 	 */
-	protected function getMessageCounter( $queueIdentifier ) : MessageCounter {
+	protected function getMessageCounter( $queueIdentifier ): MessageCounter {
 
-		if ( !array_key_exists( $queueIdentifier, $this->messageCounters ) ) {
+		if ( !array_key_exists( $queueIdentifier, self::$messageCounters ) ) {
 
 			$messageCounter = new MessageCounter( $queueIdentifier );
 
@@ -103,11 +119,11 @@ class RabbitMQ
 			$this->exchangeBuilder->build( $queueIdentifier );
 
 			$messageCounter->setChannel( $channel );
-			$this->messageCounters[$queueIdentifier] = $messageCounter;
+			self::$messageCounters[$queueIdentifier] = $messageCounter;
 
 		}
 
-		$messageCounter = $this->messageCounters[$queueIdentifier];
+		$messageCounter = self::$messageCounters[$queueIdentifier];
 		if ( $messageCounter->getCounter() > $this->messagesPerConnection ) {
 
 			$messageCounter->getChannel()->close();
@@ -118,4 +134,5 @@ class RabbitMQ
 
 		return $messageCounter;
 	}
+
 }
