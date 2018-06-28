@@ -6,6 +6,12 @@ use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\RabbitMQExchangeBuilder;
 /**
  * Class ChannelManager
  * @package Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder
+ *
+ * This object manages channels for the RabbitMQ object.
+ * It is a shared storage of queueIdentifier -> connection and it manages them by recreating channels once the
+ * counter for `messagesPerConnection` is exceeded.
+ * This is necessary because message ids are 4 byte unsigned int and thus cannot exceep 65k. RabbitMQ does not automatically
+ * wrap around to start again at 0
  */
 class ChannelManager {
 
