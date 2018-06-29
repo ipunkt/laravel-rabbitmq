@@ -91,7 +91,7 @@ class Rpc {
 	/**
 	 * @param RabbitMQ $rabbitMQ
 	 * @param string $routingKey
-	 * @param \Closure $callback
+	 * @param \Closure $callback function(array $data) { ... }
 	 * @return bool
 	 */
 	public function call( RabbitMQ $rabbitMQ, string $routingKey, \Closure $callback ) {
