@@ -20,7 +20,7 @@ return [
 			/**
 			 * The name opf the exchange
 			 */
-			'exchange' => 'NAME_HERE',
+			'name' => 'NAME_HERE',
 
 			/**
 			 * Connection to use when sending messages to this exchange
