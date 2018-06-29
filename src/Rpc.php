@@ -1,16 +1,15 @@
-<?php namespace Ipunkt\LaravelRabbitMQ\Callback;
+<?php namespace Ipunkt\LaravelRabbitMQ;
 
 use Ipunkt\LaravelRabbitMQ\Config\ConfigManager;
-use Ipunkt\LaravelRabbitMQ\RabbitMQ;
 use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\ExchangeBuilder;
 
 /**
- * Class RabbitMQRpc
- * @package Ipunkt\LaravelRabbitMQ\RabbitMQRpc
+ * Class Rpc
+ * @package Ipunkt\LaravelRabbitMQ\Callback\Rpc
  *
  * Uses RabbitMQ to make a pseudo synchronous call
  */
-class RabbitMQRpc {
+class Rpc {
 	/**
 	 * @var ExchangeBuilder
 	 */
@@ -23,6 +22,7 @@ class RabbitMQRpc {
 	/**
 	 * RabbitMQRpc constructor.
 	 * @param ExchangeBuilder $exchangeBuilder
+	 * @param ConfigManager $configManager
 	 */
 	public function __construct( ExchangeBuilder $exchangeBuilder, ConfigManager $configManager ) {
 		$this->exchangeBuilder = $exchangeBuilder;
@@ -52,7 +52,7 @@ class RabbitMQRpc {
 
 	/**
 	 * @param self $base
-	 * @return RabbitMQRpc
+	 * @return self
 	 */
 	protected static function copy( self $base ): self {
 		$new = new self( $base->exchangeBuilder, $base->configManager );
