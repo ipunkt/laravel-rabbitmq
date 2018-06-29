@@ -145,8 +145,7 @@ class ConfigManager {
 		$logging = new LoggingConfig();
 
 		$logging->setEnabled( array_get( $config, 'enable', false ) );
-		$logging->setConnectionName( array_get( $config, 'connection', '' ) );
-		$logging->setExchangeName( array_get( $config, 'exchange', '' ) );
+		$logging->setExchangeIdentifier( array_get( $config, 'exchange', '' ) );
 		$logging->setThrowEvents( array_get( $config, 'event-errors', false ) );
 		$logging->setExtraContext( array_get( $config, 'extra-context', [] ) );
 

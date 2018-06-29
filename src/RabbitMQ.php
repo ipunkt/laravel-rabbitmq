@@ -82,10 +82,27 @@ class RabbitMQ {
 		return $new;
 	}
 
+	/**
+	 * @param string $queue
+	 * @return RabbitMQ
+	 * @deprecated
+	 */
 	public function onQueue( string $queue ): self {
 		$new = self::copy( $this );
 
 		$new->exchange = $queue;
+
+		return $new;
+	}
+
+	/**
+	 * @param string $exchangeIdentifier
+	 * @return RabbitMQ
+	 */
+	public function onExchange( string $exchangeIdentifier ): self {
+		$new = self::copy( $this );
+
+		$new->exchange = $exchangeIdentifier;
 
 		return $new;
 	}

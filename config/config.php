@@ -136,10 +136,11 @@ return [
 	'logging' => [
 		/**
 		 * Set this to false if you do not wish to log Exceptions or Throwables from `rabbitmq:listen`
+		 *
+		 * Note: setting this to true no longer enables logging to rabbitmq. Create a custom channel to do this. See
+		 * the readme.md
 		 */
 		'enable' => false,
-
-		'connection' => 'default-connection',
 
 		'exchange' => 'default-exchange',
 

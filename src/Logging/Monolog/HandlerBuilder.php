@@ -1,7 +1,6 @@
 <?php namespace Ipunkt\LaravelRabbitMQ\Logging\Monolog;
 
-use Illuminate\Log\LogManager;
-use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\RabbitMQExchangeBuilder;
+use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\ExchangeBuilder;
 
 /**
  * Class HandlerBuilder
@@ -9,34 +8,28 @@ use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\RabbitMQExchangeBuilder;
  */
 class HandlerBuilder {
 	/**
-	 * @var RabbitMQExchangeBuilder
+	 * @var ExchangeBuilder
 	 */
 	private $exchangeBuilder;
-	/**
-	 * @var Log
-	 */
-	private $log;
 
 	/**
 	 * HandlerBuilder constructor.
-	 * @param RabbitMQExchangeBuilder $exchangeBuilder
-	 * @param Log $log
+	 * @param ExchangeBuilder $exchangeBuilder
 	 */
-	public function __construct( RabbitMQExchangeBuilder $exchangeBuilder, LogManager $log) {
+	public function __construct( ExchangeBuilder $exchangeBuilder) {
 		$this->exchangeBuilder = $exchangeBuilder;
-		$this->log = $log;
 	}
 
 	/**
-	 * @param $configurationName
+	 * @param $exchangeIdentifier
 	 * @param $exchangeName
 	 * @param array $extraContext
 	 * @return AmqpHandlerWithExtraContext
 	 */
-	public function buildHandler($configurationName, $exchangeName, $extraContext = []) {
-		$channel = $this->exchangeBuilder->buildChannel($configurationName);
+	public function buildHandler( $exchangeIdentifier, $extraContext = []) {
+		$channel = $this->exchangeBuilder->buildChannel($exchangeIdentifier);
 
-		$this->exchangeBuilder->build($configurationName, true);
+		$exchangeName = $this->exchangeBuilder->buildExchange($exchangeIdentifier, $channel);
 
 		$handler = new AmqpHandlerWithExtraContext($channel, $exchangeName);
 		$handler->setExtraContext($extraContext);

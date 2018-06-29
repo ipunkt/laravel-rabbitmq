@@ -3,7 +3,6 @@
 namespace Ipunkt\LaravelRabbitMQ\Providers;
 
 use Illuminate\Contracts\Foundation\Application;
-use Illuminate\Log\LogManager;
 use Illuminate\Support\ServiceProvider;
 use Ipunkt\LaravelRabbitMQ\Config\ConfigManager;
 use Ipunkt\LaravelRabbitMQ\Console\RabbitMQListenCommand;
@@ -41,13 +40,14 @@ class LaravelRabbitMQServiceProvider extends ServiceProvider {
 		$this->app->bind( CreateRabbitmqLogger::class, function () {
 			$builder = $this->app->make( HandlerBuilder::class );
 
-			$queueIdentifier = config( 'laravel-rabbitmq.logging.queue-identifier' );
+			/**
+			 * @var ConfigManager $configManager
+			 */
+			$configManager = $this->app->make(ConfigManager::class);
 
-			$exchangeName = config( 'laravel-rabbitmq.queues.' . $queueIdentifier . '.exchange.exchange' );
+			$loggingConfig = $configManager->getLogging();
 
-			$extraContext = config( 'laravel-rabbitmq.queues.' . $queueIdentifier . '.extra-context', [] );
-
-			return new CreateRabbitmqLogger( $builder, $queueIdentifier, $exchangeName, $extraContext );
+			return new CreateRabbitmqLogger( $builder, $loggingConfig->getExchangeIdentifier(), $loggingConfig->getExtraContext() );
 		} );
 
 		if ( $this->app->runningInConsole() ) {
@@ -77,48 +77,15 @@ class LaravelRabbitMQServiceProvider extends ServiceProvider {
 	}
 
 	public function boot() {
-		$loggingEnabled = config( 'laravel-rabbitmq.logging.enable', false ) && !$this->app->environment( 'testing' );
-		if ( !$loggingEnabled )
-			return;
-
 		/**
-		 * @var CreateRabbitmqLogger $createRabbitmqLogger
+		 * Logging is no longer enabled here.
+		 * To enable logging use the following config:
+		 *
+		 * 'rabbitmq' => [
+		 *   'driver' => 'custom',
+         *   'via' => 'Ipunkt\LaravelRabbitMQ\Logging\CreateRabbitmqLogger',
+		 * ]
 		 */
-		$createRabbitmqLogger = $this->app->make( CreateRabbitmqLogger::class );
-
-		/**
-		 * @var LogManager $log
-		 */
-		$log = $this->app->make( 'log' );
-
-		$tries = 0;
-		$success = false;
-		do {
-
-			try {
-				$handler = $createRabbitmqLogger();
-				$success = true;
-			} catch ( \Throwable $t ) {
-				$log->warning( 'Failed to open rabbitmq for logging', [
-					'message' => $t->getMessage(),
-					'trace' => $t->getTraceAsString(),
-				] );
-				++$tries;
-				if ( $tries >= 5 ) {
-					$log->warning( 'Giving up trying to create rabbitmq for logging', [
-						'tries' => $tries,
-						'message' => $t->getMessage(),
-						'trace' => $t->getTraceAsString(),
-					] );
-
-					return;
-				}
-				sleep( 1 );
-			}
-
-		} while ( !$success );
-
-		$log->pushHandler( $handler );
 	}
 
 	/**

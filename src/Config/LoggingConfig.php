@@ -14,12 +14,7 @@ class LoggingConfig {
 	/**
 	 * @var string
 	 */
-	protected $connectionName = '';
-
-	/**
-	 * @var string
-	 */
-	protected $exchangeName = '';
+	protected $exchangeIdentifier = '';
 
 	/**
 	 * @var bool
@@ -50,32 +45,16 @@ class LoggingConfig {
 	/**
 	 * @return string
 	 */
-	public function getConnectionName(): string {
-		return $this->connectionName;
+	public function getExchangeIdentifier(): string {
+		return $this->exchangeIdentifier;
 	}
 
 	/**
-	 * @param string $connectionName
+	 * @param string $exchangeIdentifier
 	 * @return LoggingConfig
 	 */
-	public function setConnectionName( string $connectionName ): LoggingConfig {
-		$this->connectionName = $connectionName;
-		return $this;
-	}
-
-	/**
-	 * @return string
-	 */
-	public function getExchangeName(): string {
-		return $this->exchangeName;
-	}
-
-	/**
-	 * @param string $exchangeName
-	 * @return LoggingConfig
-	 */
-	public function setExchangeName( string $exchangeName ): LoggingConfig {
-		$this->exchangeName = $exchangeName;
+	public function setExchangeIdentifier( string $exchangeIdentifier ): LoggingConfig {
+		$this->exchangeIdentifier = $exchangeIdentifier;
 		return $this;
 	}
 

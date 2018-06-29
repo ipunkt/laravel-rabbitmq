@@ -6,6 +6,11 @@ We provide a separate package for the use of [RabbitMQ](https://www.rabbitmq.com
 
 This package provides the sending part as well as the listener part. The sending part sends synchronously to the message queue. The listener maps routing keys to an event listener configured.
 
+## Warning!
+The config format changed in 0.4.0 and is no longer compatible with previous versions.
+RabbitMQ onQueue is deprecated. It has always selected the exchange to post to, not the queue.
+At some point in the future(probably in 1.0.0) onQueue will change to actually allow posting to a queue defined in the config
+
 ## Branch info
 The master branch is currently for laravel 5.6+. Use the `5.4` branch for laravel <= 5.5
 This is necessary because laravel 5.6 changed the logging interfaces.
@@ -133,10 +138,11 @@ Marking messages as persistent doesn't fully guarantee that a message won't be l
 ---
 
 ### Logging
-If logging is set to true then a MessageHandler is added to the laravel monolog instance which sends messages to the
-given exchange.
-If `extra-context` is set then the content will be added to every messages context. Use case for this is to add
-a `'service' => 'currentmicroservice'` info to all messages to identify which service the message is from.
-Unless `event-errors` is false Exceptions or Throwables caught in `rabbitmq:listen` are forwarded to the laravel logger.
+Logging is now enabled by adding a laravel log channel with the `custom` driver:
 
-
+```php
+    'rabbitmq' => [
+        'driver' => 'custom',
+        'via' => Ipunkt\LaravelRabbitMQ\Logging\Monolog\HandlerBuilder\CreateRabbitmqLogger::class,
+    ],
+```

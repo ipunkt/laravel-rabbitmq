@@ -8,14 +8,14 @@ use Ipunkt\LaravelRabbitMQ\Logging\Monolog\HandlerBuilder;
 class CreateRabbitmqLogger {
 
 	/**
-	 * @var \Ipunkt\LaravelRabbitMQ\RabbitMQ\Monolog\HandlerBuilder
+	 * @var HandlerBuilder
 	 */
 	protected $handlerBuilder;
 
 	/**
 	 * @var string
 	 */
-	protected $queueIdentifier = '';
+	protected $exchangeIdentifier = '';
 
 	/**
 	 * @var string
@@ -29,27 +29,26 @@ class CreateRabbitmqLogger {
 	/**
 	 * CreateRabbitmqLogger constructor.
 	 * @param HandlerBuilder $handlerBuilder
-	 * @param $queueIdentifier
+	 * @param $exchangeIdentfier
 	 * @param $exchangeName
 	 * @param null $extraContext
 	 */
-	public function __construct( HandlerBuilder $handlerBuilder, $queueIdentifier, $exchangeName, $extraContext = null) {
+	public function __construct( HandlerBuilder $handlerBuilder, $exchangeIdentfier, $extraContext = null) {
 		if($extraContext === null)
 			$extraContext = [];
 
 		$this->handlerBuilder = $handlerBuilder;
-		$this->queueIdentifier = $queueIdentifier;
-		$this->exchangeName = $exchangeName;
+		$this->exchangeIdentifier = $exchangeIdentfier;
 		$this->extraContext = $extraContext;
 	}
 
-	    /**
+	/**
      * Create a custom Monolog instance.
      *
-     * @return \Monolog\Logger
+	 * @return Monolog\AmqpHandlerWithExtraContext
      */
     public function __invoke() {
-	    return $this->handlerBuilder->buildHandler($this->queueIdentifier, $this->exchangeName, $this->extraContext);
+	    return $this->handlerBuilder->buildHandler($this->exchangeIdentifier, $this->extraContext);
     }
 
 }
