@@ -58,9 +58,7 @@ class LaravelRabbitMQServiceProvider extends ServiceProvider {
 
 			$this->app->bind( EventMapper::class, function () {
 
-				$config = config( 'laravel-rabbitmq.queues' );
-
-				return new EventMapper( app( KeyToRegex::class ), $config );
+				return new EventMapper( app( KeyToRegex::class ), $this->app->make(ConfigManager::class) );
 
 			} );
 
