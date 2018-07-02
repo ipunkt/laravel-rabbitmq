@@ -158,7 +158,7 @@ class ConfigManager {
 	 * @return ConnectionConfig
 	 */
 	public function getConnection( string $connectionIdentifier ) : ConnectionConfig {
-		if ( !array_key_exists( $connectionIdentifier, $this->queues ) )
+		if ( !array_key_exists( $connectionIdentifier, $this->connections ) )
 			throw new ConfigNotFoundException( "connections $connectionIdentifier not found" );
 
 		return $this->connections[$connectionIdentifier];
