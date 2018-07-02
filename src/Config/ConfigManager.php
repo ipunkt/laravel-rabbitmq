@@ -135,7 +135,7 @@ class ConfigManager {
 			} );
 			$queue->setBindings( $bindings );
 
-			$this->exchanges[$identifier] = $queue;
+			$this->queues[$identifier] = $queue;
 		} );
 	}
 
