@@ -94,8 +94,8 @@ class RabbitMQListenCommand extends Command {
 		foreach ( $queueConfig->getBindings() as $exchangeIdentifier => $bindings ) {
 			$exchangeConfig = $this->configManager->getExchange($exchangeIdentifier);
 
-			foreach($bindings as $routingKey => $eventClasspath)
-				$channel->queue_bind( $queueName, $exchangeConfig->getName(), $routingKey );
+			foreach($bindings as $binding)
+				$channel->queue_bind( $queueName, $exchangeConfig->getName(), $binding->getRoutingKey() );
 		}
 
 		$callback = function ( $msg ) use ( $queueIdentifier ) {
