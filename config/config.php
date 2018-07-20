@@ -6,10 +6,10 @@
 return [
 	'connections' => [
 		'default-connection' => [
-			'host' => '',
-			'port' => 5672,
-			'user' => 'guest',
-			'password' => 'guest',
+			'host' => env('RMQ_HOST', 'rabbitmq'),
+			'port' => env('RMQ_PORT', 5672),
+			'user' => env('RMQ_USER', 'guest'),
+			'password' => env('RMQ_PASSWORD', 'guest'),
 		],
 	],
 
@@ -20,7 +20,7 @@ return [
 			/**
 			 * The name opf the exchange
 			 */
-			'name' => 'NAME_HERE',
+			'name' => env('RMQ_EXCHANGE'),
 
 			/**
 			 * Connection to use when sending messages to this exchange
@@ -72,7 +72,7 @@ return [
 			/**
 			 *
 			 */
-			'name' => '',
+			'name' => env('RMQ_QUEUE', ''),
 
 			/**
 			 * Setting this to true will cause the queue to continue existing even on rabbitmq restarts
