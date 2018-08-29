@@ -215,8 +215,14 @@ class RabbitMQListenCommand extends Command {
 			return;
 		}
 
+		/**
+		 * TODO: Requeueing always returns the message to the top of the queue. We want it at the back so other messages
+		 * are processed while the cause of the exception is is addressed
+		 */
 		// Requeue message
 		$msgChannel->basic_nack( $msg->delivery_info['delivery_tag'], false, true );
+		// Prevent error message spam
+		sleep(30);
 		return;
 	}
 }
