@@ -66,7 +66,7 @@ class RabbitMQListenCommand extends Command {
 	public function __construct( EventMapper $eventMapper, ConnectionBuilder $connectionBuilder,
 	                             ChannelBuilder $channelBuilder, ExchangeBuilder $exchangeBuilder,
 	                             QueueBuilder $queueBuilder,
-	                             ConfigManager $configManager, LogManager $logger ) {
+	                             ConfigManager $configManager, $logger ) {
 		parent::__construct();
 		$this->eventMapper = $eventMapper;
 		$this->logger = $logger;
