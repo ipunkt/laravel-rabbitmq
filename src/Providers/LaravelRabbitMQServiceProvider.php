@@ -3,17 +3,20 @@
 namespace Ipunkt\LaravelRabbitMQ\Providers;
 
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Events\Dispatcher;
 use Illuminate\Support\ServiceProvider;
 use Ipunkt\LaravelRabbitMQ\Config\ConfigManager;
 use Ipunkt\LaravelRabbitMQ\Console\RabbitMQListenCommand;
 use Ipunkt\LaravelRabbitMQ\EventMapper\EventMapper;
 use Ipunkt\LaravelRabbitMQ\EventMapper\KeyToRegex;
+use Ipunkt\LaravelRabbitMQ\Events\ExceptionInRabbitMQEvent;
 use Ipunkt\LaravelRabbitMQ\Logging\CreateRabbitmqLogger;
 use Ipunkt\LaravelRabbitMQ\Logging\Monolog\HandlerBuilder;
 use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\ChannelBuilder;
 use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\ConnectionBuilder;
 use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\ExchangeBuilder;
 use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\QueueBuilder;
+use Symfony\Component\EventDispatcher\Event;
 
 class LaravelRabbitMQServiceProvider extends ServiceProvider {
 	/**
@@ -84,6 +87,25 @@ class LaravelRabbitMQServiceProvider extends ServiceProvider {
          *   'via' => 'Ipunkt\LaravelRabbitMQ\Logging\CreateRabbitmqLogger',
 		 * ]
 		 */
+
+		$this->registerSentryLogger();
+	}
+
+	private function registerSentryLogger(  ) {
+
+		if ( !config('laravel-rabbitmq.logging.sentry', false) )
+			return;
+
+		/**
+		 * @var Dispatcher $event
+		 */
+		$event = app('event');
+		$event->listen(ExceptionInRabbitMQEvent::class, function(ExceptionInRabbitMQEvent $e) {
+			if ( !app()->bound( 'sentry' ) )
+				return;
+
+			app( 'sentry' )->captureException( $e->getException() );
+		});
 	}
 
 	/**

@@ -142,13 +142,21 @@ return [
 		 */
 		'enable' => false,
 
+
 		'exchange' => 'default-exchange',
 
 		/**
 		 * Setting this to true will cause the rabbitmq:listen command to throw `ExceptionInRabbitMQEvent`s when an exception
 		 * happens in an Event handler.
 		 */
-		'event-errors' => false,
+		'event-errors' => true,
+
+		/**
+		 * Register a listener for ExceptionInRabbitMQEvents which sends the Exception to the sentry/sentry-laravel package
+		 * NOTE: This will not work unless event-errors is also set to `true`
+		 */
+		'sentry' => false,
+
 		'extra-context' => [
 			'service' => 'Service name',
 		],
