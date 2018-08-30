@@ -99,7 +99,7 @@ class LaravelRabbitMQServiceProvider extends ServiceProvider {
 		/**
 		 * @var Dispatcher $event
 		 */
-		$event = app(\Illuminate\Contracts\Events\Dispatcher::class;
+		$event = app(\Illuminate\Contracts\Events\Dispatcher::class);
 		$event->listen(ExceptionInRabbitMQEvent::class, function(ExceptionInRabbitMQEvent $e) {
 			if ( !app()->bound( 'sentry' ) )
 				return;
