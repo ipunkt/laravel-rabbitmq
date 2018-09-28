@@ -123,6 +123,8 @@ class RabbitMQListenCommand extends Command {
 				try {
 					$headers = $msg->get( 'application_headers' )->getNativeData();
 					$routingKey = array_get( $headers, 'routing_key', $routingKey );
+					// Was redelivered,
+					sleep( 1 );
 				} catch ( \OutOfBoundsException $e ) {
 					//
 				}
