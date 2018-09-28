@@ -16,6 +16,9 @@ use Ipunkt\LaravelRabbitMQ\RabbitMQ\IsDurableChecker;
 use Ipunkt\LaravelRabbitMQ\TakesRoutingKey;
 use Ipunkt\LaravelRabbitMQ\TakesRoutingMatches;
 use PhpAmqpLib\Channel\AMQPChannel;
+use PhpAmqpLib\Exception\AMQPIOException;
+use PhpAmqpLib\Message\AMQPMessage;
+use PhpAmqpLib\Wire\AMQPTable;
 
 class RabbitMQListenCommand extends Command {
 	protected $signature = 'rabbitmq:listen
@@ -78,115 +81,141 @@ class RabbitMQListenCommand extends Command {
 	}
 
 	public function handle() {
-		$queueIdentifier = $this->argument( 'queue' );
+		while(true) {
+			$queueIdentifier = $this->argument( 'queue' );
 
-		$queueConfig = $this->configManager->getQueue( $queueIdentifier );
+			$queueConfig = $this->configManager->getQueue( $queueIdentifier );
 
-		$connection = $this->connectionBuilder->buildConnection( $queueConfig->getConnectionIdentifier() );
-		$channel = $this->channelBuilder->buildChannel( $connection );
+			$connection = $this->connectionBuilder->buildConnection( $queueConfig->getConnectionIdentifier() );
+			$channel = $this->channelBuilder->buildChannel( $connection );
 
-		// Build all exchanges
-		foreach ( $queueConfig->getBindings() as $exchangeIdentifier => $bindings )
-			$this->exchangeBuilder->buildExchange( $exchangeIdentifier, $channel );
+			// Build all exchanges
+			foreach ( $queueConfig->getBindings() as $exchangeIdentifier => $bindings )
+				$this->exchangeBuilder->buildExchange( $exchangeIdentifier, $channel );
 
-		$queueName = $this->queueBuilder->buildQueue( $queueIdentifier, $channel );
+			$queueName = $this->queueBuilder->buildQueue( $queueIdentifier, $channel );
 
-		foreach ( $queueConfig->getBindings() as $exchangeIdentifier => $bindings ) {
-			$exchangeConfig = $this->configManager->getExchange($exchangeIdentifier);
+			foreach ( $queueConfig->getBindings() as $exchangeIdentifier => $bindings ) {
+				$exchangeConfig = $this->configManager->getExchange( $exchangeIdentifier );
 
-			foreach($bindings as $binding)
-				$channel->queue_bind( $queueName, $exchangeConfig->getName(), $binding->getRoutingKey() );
-		}
-
-		$callback = function ( $msg ) use ( $queueIdentifier ) {
-			/**
-			 * @var AMQPChannel $msgChannel
-			 */
-			$msgChannel = $msg->delivery_info['channel'];
-			$routingKey = $msg->delivery_info['routing_key'];
-			$eventMatches = $this->eventMapper->map( $queueIdentifier, $routingKey );
-
-			if ( empty( $eventMatches ) ) {
-				// Reject message
-				$msgChannel->basic_nack( $msg->delivery_info['delivery_tag'], false, false );
-				return;
+				foreach ( $bindings as $binding )
+					$channel->queue_bind( $queueName, $exchangeConfig->getName(), $binding->getRoutingKey() );
 			}
 
-			$messageStatus = new MessageStatus();
-			foreach ( $eventMatches as $eventMatch ) {
-				$event = $eventMatch->getEventClass();
+			$callback = function ( $msg ) use ( $queueIdentifier ) {
 
+				// Crude way of preventing system overload when only erroring messages are left in a queue
+				if ( $msg->delivery_info['redelivered'] )
+					sleep( 1 );
+
+				/**
+				 * @var AMQPMessage $msg
+				 * @var AMQPChannel $msgChannel
+				 */
+				$msgChannel = $msg->delivery_info['channel'];
+
+				$routingKey = $msg->delivery_info['routing_key'];
+
+				/**
+				 * Use the header `routing_key` instead if the message was directly delivered to this queue(as happens when
+				 * redelivering messages to the back of the queue)
+				 */
 				try {
-					if ( $event[0] !== '\\' )
-						$event = '\\' . $event;
+					$headers = $msg->get( 'application_headers' )->getNativeData();
+					$routingKey = array_get( $headers, 'routing_key', $routingKey );
+				} catch ( \OutOfBoundsException $e ) {
+					//
+				}
 
-					$eventObject = new $event( json_decode( $msg->body, true ) );
-					if ( $eventObject instanceof TakesRoutingKey )
-						$eventObject->setRoutingKey( $routingKey );
-					if ( $eventObject instanceof TakesRoutingMatches )
-						$eventObject->setRoutingMatches( $eventMatch->getMatchedPlaceholders() );
+				$eventMatches = $this->eventMapper->map( $queueIdentifier, $routingKey );
 
-					$messageStatus->addEventReturns( event( $eventObject ) );
+				if ( empty( $eventMatches ) ) {
+					// Reject message
+					$msgChannel->basic_nack( $msg->delivery_info['delivery_tag'], false, false );
+					return;
+				}
+
+				$messageStatus = new MessageStatus();
+				foreach ( $eventMatches as $eventMatch ) {
+					$event = $eventMatch->getEventClass();
+
+					try {
+						if ( $event[0] !== '\\' )
+							$event = '\\' . $event;
+
+						$eventObject = new $event( json_decode( $msg->body, true ) );
+						if ( $eventObject instanceof TakesRoutingKey )
+							$eventObject->setRoutingKey( $routingKey );
+						if ( $eventObject instanceof TakesRoutingMatches )
+							$eventObject->setRoutingMatches( $eventMatch->getMatchedPlaceholders() );
+
+						$messageStatus->addEventReturns( event( $eventObject ) );
 
 
-				} catch ( \Throwable $e ) {
+					} catch ( AQPIOException $e ) {
+						throw $e;
+					} catch ( \Throwable $e ) {
 
-					$this->handleException( $msg, $e );
+						$this->handleException( $queueIdentifier, $msg, $e );
 
+						return;
+
+					}
+
+				}
+
+				if ( $messageStatus->takenEncountered() ) {
+
+					// acknowledge message as having been processed
+					$msgChannel->basic_ack( $msg->delivery_info['delivery_tag'] );
 					return;
 
 				}
 
-			}
-
-			if ( $messageStatus->takenEncountered() ) {
-
-				// acknowledge message as having been processed
-				$msgChannel->basic_ack( $msg->delivery_info['delivery_tag'] );
+				// Reject message
+				$msgChannel->basic_nack( $msg->delivery_info['delivery_tag'], false, false );
 				return;
 
-			}
+			};
 
-			// Reject message
-			$msgChannel->basic_nack( $msg->delivery_info['delivery_tag'], false, false );
-			return;
+			$channel->basic_consume( $queueName, '', false, false, false, false, $callback );
 
-		};
+			while ( count( $channel->callbacks ) ) {
+				try {
+					$channel->wait();
+				} catch ( AMQPIOException $e ) {
+					$connection->close();
+					usleep(100);
+				} catch ( \Throwable $e ) {
 
-		$channel->basic_consume( $queueName, '', false, false, false, false, $callback );
+					if ( config( 'laravel-rabbitmq.logging.event-errors', true ) ) {
 
-		while ( count( $channel->callbacks ) ) {
-			try {
-				$channel->wait();
-			} catch ( \Throwable $e ) {
+						$this->logger->alert( 'Exception in Rabbitmq wait', [
+							'message' => $e->getMessage(),
+							'exception' => $e,
+						] );
 
-				if ( config( 'laravel-rabbitmq.logging.event-errors', true ) ) {
+					}
 
-					$this->logger->alert( 'Exception in Rabbitmq wait', [
-						'message' => $e->getMessage(),
-						'exception' => $e,
-					] );
-
+					$this->error( $e->getFile() . ":" . $e->getLine() . ' ' . $e->getMessage() );
+					$this->error( $e->getCode() );
 				}
-
-				$this->error( $e->getFile() . ":" . $e->getLine() . ' ' . $e->getMessage() );
-				$this->error( $e->getCode() );
 			}
-		}
 
-		$channel->close();
+			$channel->close();
+		}
 	}
 
 	/**
 	 * @param $queueIdentifier
-	 * @param $msg
+	 * @param AMQPMessage $msg
 	 * @param \Exception|\Throwable $e
 	 */
-	protected function handleException( $msg, $e ) {
+	protected function handleException( $queueIdentifier, $msg, $e ) {
 
 		$loggingConfig = $this->configManager->getLogging();
 
-		if( $loggingConfig->isEnabled() ) {
+		if ( $loggingConfig->isEnabled() ) {
 
 			$this->logger->alert( 'Exception in Rabbitmq eventhandler', [
 				'message' => $e->getMessage(),
@@ -201,7 +230,7 @@ class RabbitMQListenCommand extends Command {
 		$this->error( $e->getCode() );
 		$this->error( $e->getTraceAsString() );
 
-		if( $loggingConfig->isThrowEvents() )
+		if ( $loggingConfig->isThrowEvents() )
 			event( new ExceptionInRabbitMQEvent( $e ) );
 
 		/**
@@ -209,14 +238,27 @@ class RabbitMQListenCommand extends Command {
 		 */
 		$msgChannel = $msg->delivery_info['channel'];
 
-		// Nack the message if the Exception indicates the event should be dropped
-		if ( $e instanceof DropsEvent ) {
-			$msgChannel->basic_nack( $msg->delivery_info['delivery_tag'], false, false );
-			return;
+		/**
+		 * Unless the message should be dropped send it again on the same queue, so it will appear at its end
+		 * Doing an nack with requeue=true here is sadly not enough as is pushes the message to the front of the queue
+		 * and thus one error in the php code will halt the entire queue
+		 *
+		 * Resending and then nacking possibly leaves us open to having the message twice in the queue but I have
+		 * not yet found a way to do this operation atomically
+		 */
+		if ( !$e instanceof DropsEvent ) {
+			$redeliverMessage = new AMQPMessage( $msg->getBody(), $msg->get_properties() );
+			$headers = new AMQPTable( [
+				'exchange' => $msg->delivery_info['exchange'],
+				'routing_key' => $msg->delivery_info['routing_key'],
+			] );
+			$redeliverMessage->set( 'application_headers', $headers );
+
+			$queueConfig = $this->configManager->getQueue( $queueIdentifier );
+			$msgChannel->basic_publish( $redeliverMessage, '', $queueConfig->getName() );
 		}
 
-		// Requeue message
-		$msgChannel->basic_nack( $msg->delivery_info['delivery_tag'], false, true );
+		$msgChannel->basic_reject( $msg->delivery_info['delivery_tag'], false );
 		return;
 	}
 }
