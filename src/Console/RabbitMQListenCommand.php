@@ -8,6 +8,8 @@ use Ipunkt\LaravelRabbitMQ\Config\ConfigManager;
 use Ipunkt\LaravelRabbitMQ\DropsEvent;
 use Ipunkt\LaravelRabbitMQ\EventMapper\EventMapper;
 use Ipunkt\LaravelRabbitMQ\Events\ExceptionInRabbitMQEvent;
+use Ipunkt\LaravelRabbitMQ\Events\RabbitMQJobFinishedEvent;
+use Ipunkt\LaravelRabbitMQ\Events\RabbitMQJobStartedEvent;
 use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\ChannelBuilder;
 use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\ConnectionBuilder;
 use Ipunkt\LaravelRabbitMQ\RabbitMQ\Builder\ExchangeBuilder;
@@ -19,6 +21,7 @@ use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Exception\AMQPIOException;
 use PhpAmqpLib\Message\AMQPMessage;
 use PhpAmqpLib\Wire\AMQPTable;
+use Illuminate\Contracts\Events\Dispatcher as Event;
 
 class RabbitMQListenCommand extends Command {
 	protected $signature = 'rabbitmq:listen
@@ -54,6 +57,10 @@ class RabbitMQListenCommand extends Command {
 	 * @var QueueBuilder
 	 */
 	private $queueBuilder;
+	/**
+	 * @var Event
+	 */
+	private $event;
 
 	/**
 	 * RabbitMQListenCommand constructor.
@@ -62,12 +69,13 @@ class RabbitMQListenCommand extends Command {
 	 * @param ChannelBuilder $channelBuilder
 	 * @param ExchangeBuilder $exchangeBuilder
 	 * @param QueueBuilder $queueBuilder
+	 * @param Event $event
 	 * @param ConfigManager $configManager
 	 * @param LogManager $logger
 	 */
 	public function __construct( EventMapper $eventMapper, ConnectionBuilder $connectionBuilder,
 	                             ChannelBuilder $channelBuilder, ExchangeBuilder $exchangeBuilder,
-	                             QueueBuilder $queueBuilder,
+	                             QueueBuilder $queueBuilder, Event $event,
 	                             ConfigManager $configManager, $logger ) {
 		parent::__construct();
 		$this->eventMapper = $eventMapper;
@@ -77,6 +85,7 @@ class RabbitMQListenCommand extends Command {
 		$this->connectionBuilder = $connectionBuilder;
 		$this->channelBuilder = $channelBuilder;
 		$this->queueBuilder = $queueBuilder;
+		$this->event = $event;
 	}
 
 	public function handle() {
@@ -136,6 +145,8 @@ class RabbitMQListenCommand extends Command {
 					return;
 				}
 
+				$startedEvent = new RabbitMQJobStartedEvent($routingKey, json_decode($msg->body, true) );
+				$this->event->dispatch( $startedEvent );
 				$messageStatus = new MessageStatus();
 				foreach ( $eventMatches as $eventMatch ) {
 					$event = $eventMatch->getEventClass();
@@ -157,10 +168,13 @@ class RabbitMQListenCommand extends Command {
 						throw $e;
 					} catch ( \Throwable $e ) {
 
-						$this->handleException( $queueIdentifier, $msg, $e );
+						$this->handleException($queueIdentifier, $msg, $e);
 
 						return;
 
+					} finally {
+						$finishedEvent = new RabbitMQJobFinishedEvent($routingKey, json_decode($msg->body, true) );
+						$this->event->dispatch( $finishedEvent );
 					}
 
 				}
