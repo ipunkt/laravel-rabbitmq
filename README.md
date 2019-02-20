@@ -1,3 +1,7 @@
+# Deprecated
+This package is abandoned. Please consider switching to enqueue with its laravel implementation:
+https://github.com/php-enqueue/enqueue-dev/blob/master/docs/laravel/quick_tour.md
+
 # RabbitMQ for Laravel
 
 We provide a separate package for the use of [RabbitMQ](https://www.rabbitmq.com) because we want to use it for communication between microservices, written in any language. The existing packages are bound to laravel so we have the whole data - with class names and so on - within the message body. Our package sends only the raw data through RabbitMQ.
